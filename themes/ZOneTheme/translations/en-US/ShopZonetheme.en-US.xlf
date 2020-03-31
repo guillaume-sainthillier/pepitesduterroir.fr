@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" version="1.2">
+  <file original="/Applications/XAMPP/xamppfiles/htdocs/zone/web/backoffice" source-language="en-US" target-language="en-US" datatype="plaintext">
+    <body>
+      <trans-unit id="e202ca64fbdafd978aadd3d2e9db7aad">
+        <source>Do not show this popup again.</source>
+        <target>Do not show this popup again</target>
+        <note>Line: </note>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>

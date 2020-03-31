@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2019 PrestaShop and Contributors
+ * 2007-2020 PrestaShop and Contributors
  *
  * NOTICE OF LICENSE
  *
@@ -13,7 +13,7 @@
  * to license@prestashop.com so we can send you a copy immediately.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2019 PrestaShop SA and Contributors
+ * @copyright 2007-2020 PrestaShop SA and Contributors
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License 3.0 (AFL-3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -22,6 +22,9 @@ use PrestaShop\Module\PrestashopCheckout\Api\Payment\Onboarding;
 use PrestaShop\Module\PrestashopCheckout\Api\Psx\Onboarding as PsxOnboarding;
 use PrestaShop\Module\PrestashopCheckout\Entity\PsAccount;
 use PrestaShop\Module\PrestashopCheckout\PersistentConfiguration;
+use PrestaShop\Module\PrestashopCheckout\Presenter\Order\OrderPendingPresenter;
+use PrestaShop\Module\PrestashopCheckout\Presenter\Store\Modules\PaypalModule;
+use PrestaShop\Module\PrestashopCheckout\Presenter\Transaction\TransactionPresenter;
 use PrestaShop\Module\PrestashopCheckout\PsxData\PsxDataPrepare;
 use PrestaShop\Module\PrestashopCheckout\PsxData\PsxDataValidation;
 use PrestaShop\Module\PrestashopCheckout\Repository\PaypalAccountRepository;
@@ -34,7 +37,13 @@ class AdminAjaxPrestashopCheckoutController extends ModuleAdminController
      */
     public function ajaxProcessUpdatePaymentMethodsOrder()
     {
-        Configuration::updateValue('PS_CHECKOUT_PAYMENT_METHODS_ORDER', Tools::getValue('paymentMethods'));
+        Configuration::updateValue(
+            'PS_CHECKOUT_PAYMENT_METHODS_ORDER',
+            Tools::getValue('paymentMethods'),
+            false,
+            null,
+            (int) Context::getContext()->shop->id
+        );
     }
 
     /**
@@ -42,7 +51,13 @@ class AdminAjaxPrestashopCheckoutController extends ModuleAdminController
      */
     public function ajaxProcessUpdateCaptureMode()
     {
-        Configuration::updateValue('PS_CHECKOUT_INTENT', Tools::getValue('captureMode'));
+        Configuration::updateValue(
+            'PS_CHECKOUT_INTENT',
+            Tools::getValue('captureMode'),
+            false,
+            null,
+            (int) Context::getContext()->shop->id
+        );
     }
 
     /**
@@ -50,7 +65,13 @@ class AdminAjaxPrestashopCheckoutController extends ModuleAdminController
      */
     public function ajaxProcessUpdatePaymentMode()
     {
-        Configuration::updateValue('PS_CHECKOUT_MODE', Tools::getValue('paymentMode'));
+        Configuration::updateValue(
+            'PS_CHECKOUT_MODE',
+            Tools::getValue('paymentMode'),
+            false,
+            null,
+            (int) Context::getContext()->shop->id
+        );
     }
 
     /**
@@ -61,8 +82,20 @@ class AdminAjaxPrestashopCheckoutController extends ModuleAdminController
      */
     public function ajaxProcessEditRoundingSettings()
     {
-        Configuration::updateValue('PS_ROUND_TYPE', '1');
-        Configuration::updateValue('PS_PRICE_ROUND_MODE', '2');
+        Configuration::updateValue(
+            'PS_ROUND_TYPE',
+            '1',
+            false,
+            null,
+            (int) Context::getContext()->shop->id
+        );
+        Configuration::updateValue(
+            'PS_PRICE_ROUND_MODE',
+            '2',
+            false,
+            null,
+            (int) Context::getContext()->shop->id
+        );
 
         $this->ajaxDie(json_encode(true));
     }
@@ -197,6 +230,16 @@ class AdminAjaxPrestashopCheckoutController extends ModuleAdminController
     }
 
     /**
+     * AJAX: Update paypal account status
+     */
+    public function ajaxProcessRefreshPaypalAccountStatus()
+    {
+        $this->ajaxDie(
+            json_encode((new PaypalModule())->present())
+        );
+    }
+
+    /**
      * AJAX: Retrieve the onboarding paypal link
      */
     public function ajaxProcessGetOnboardingLink()
@@ -204,6 +247,26 @@ class AdminAjaxPrestashopCheckoutController extends ModuleAdminController
         // Generate a new onboarding link to lin a new merchant
         $this->ajaxDie(
             json_encode((new Onboarding($this->context->link))->getOnboardingLink())
+        );
+    }
+
+    /**
+     * AJAX: Retrieve Reporting informations
+     */
+    public function ajaxProcessGetReportingDatas()
+    {
+        $this->ajaxDie(
+            json_encode([
+                'orders' => (new OrderPendingPresenter())->present(),
+                'transactions' => (new TransactionPresenter())->present(),
+                'countAllCheckoutTransactions' => (int) \Db::getInstance()->getValue('
+                    SELECT COUNT(op.id_order_payment)
+                    FROM `' . _DB_PREFIX_ . 'order_payment` op
+                    INNER JOIN `' . _DB_PREFIX_ . 'orders` o ON (o.reference = op.order_reference)
+                    WHERE op.payment_method = "Prestashop Checkout"
+                    AND o.id_shop = ' . (int) \Context::getContext()->shop->id
+                ),
+            ])
         );
     }
 
@@ -229,8 +292,13 @@ class AdminAjaxPrestashopCheckoutController extends ModuleAdminController
     {
         Configuration::updateValue(
             'PS_CHECKOUT_CARD_PAYMENT_ENABLED',
-            Tools::getValue('status') ? 1 : 0
+            Tools::getValue('status') ? 1 : 0,
+            false,
+            null,
+            (int) Context::getContext()->shop->id
         );
+
+        (new PrestaShop\Module\PrestashopCheckout\Api\Payment\Shop(\Context::getContext()->link))->updateSettings();
     }
 
     /**
@@ -240,8 +308,13 @@ class AdminAjaxPrestashopCheckoutController extends ModuleAdminController
     {
         Configuration::updateValue(
             'PS_CHECKOUT_EC_ORDER_PAGE',
-            Tools::getValue('status') ? 1 : 0
+            Tools::getValue('status') ? 1 : 0,
+            false,
+            null,
+            (int) Context::getContext()->shop->id
         );
+
+        (new PrestaShop\Module\PrestashopCheckout\Api\Payment\Shop(\Context::getContext()->link))->updateSettings();
     }
 
     /**
@@ -251,8 +324,13 @@ class AdminAjaxPrestashopCheckoutController extends ModuleAdminController
     {
         Configuration::updateValue(
             'PS_CHECKOUT_EC_CHECKOUT_PAGE',
-            Tools::getValue('status') ? 1 : 0
+            Tools::getValue('status') ? 1 : 0,
+            false,
+            null,
+            (int) Context::getContext()->shop->id
         );
+
+        (new PrestaShop\Module\PrestashopCheckout\Api\Payment\Shop(\Context::getContext()->link))->updateSettings();
     }
 
     /**
@@ -262,8 +340,13 @@ class AdminAjaxPrestashopCheckoutController extends ModuleAdminController
     {
         Configuration::updateValue(
             'PS_CHECKOUT_EC_PRODUCT_PAGE',
-            Tools::getValue('status') ? 1 : 0
+            Tools::getValue('status') ? 1 : 0,
+            false,
+            null,
+            (int) Context::getContext()->shop->id
         );
+
+        (new PrestaShop\Module\PrestashopCheckout\Api\Payment\Shop(\Context::getContext()->link))->updateSettings();
     }
 
     /**
@@ -273,7 +356,10 @@ class AdminAjaxPrestashopCheckoutController extends ModuleAdminController
     {
         Configuration::updateValue(
             'PS_CHECKOUT_DEBUG_LOGS_ENABLED',
-            Tools::getValue('status') ? 1 : 0
+            Tools::getValue('status') ? 1 : 0,
+            false,
+            null,
+            (int) Context::getContext()->shop->id
         );
     }
 }

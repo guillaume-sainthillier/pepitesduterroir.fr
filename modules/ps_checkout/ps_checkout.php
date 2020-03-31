@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2019 PrestaShop and Contributors
+ * 2007-2020 PrestaShop and Contributors
  *
  * NOTICE OF LICENSE
  *
@@ -13,28 +13,10 @@
  * to license@prestashop.com so we can send you a copy immediately.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2019 PrestaShop SA and Contributors
+ * @copyright 2007-2020 PrestaShop SA and Contributors
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License 3.0 (AFL-3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
-use PrestaShop\Module\PrestashopCheckout\Api\Payment\Order;
-use PrestaShop\Module\PrestashopCheckout\Builder\Payload\OrderPayloadBuilder;
-use PrestaShop\Module\PrestashopCheckout\Database\TableManager;
-use PrestaShop\Module\PrestashopCheckout\Entity\OrderMatrice;
-use PrestaShop\Module\PrestashopCheckout\Environment\PaypalEnv;
-use PrestaShop\Module\PrestashopCheckout\ExpressCheckout;
-use PrestaShop\Module\PrestashopCheckout\Factory\CheckoutLogger;
-use PrestaShop\Module\PrestashopCheckout\HostedFieldsErrors;
-use PrestaShop\Module\PrestashopCheckout\OrderStates;
-use PrestaShop\Module\PrestashopCheckout\Presenter\Cart\CartPresenter;
-use PrestaShop\Module\PrestashopCheckout\Presenter\Store\StorePresenter;
-use PrestaShop\Module\PrestashopCheckout\Refund;
-use PrestaShop\Module\PrestashopCheckout\Repository\PaypalAccountRepository;
-use PrestaShop\Module\PrestashopCheckout\Repository\PsAccountRepository;
-use PrestaShop\Module\PrestashopCheckout\Updater\PaypalAccountUpdater;
-use PrestaShop\PrestaShop\Core\Payment\PaymentOption;
-use Ramsey\Uuid\Uuid;
-
 require_once __DIR__ . '/vendor/autoload.php';
 
 if (!defined('_PS_VERSION_')) {
@@ -43,21 +25,44 @@ if (!defined('_PS_VERSION_')) {
 
 class Ps_checkout extends PaymentModule
 {
-    // hook list used by the module
+    /**
+     * Default hook to install
+     * 1.6 and 1.7
+     *
+     * @var array
+     */
     const HOOK_LIST = [
-        'paymentOptions',
-        'paymentReturn',
-        'actionFrontControllerSetMedia',
         'actionOrderSlipAdd',
         'orderConfirmation',
+        'actionOrderStatusUpdate',
+        'actionObjectShopAddAfter',
+    ];
+
+    /**
+     * Hook to install for 1.7
+     *
+     * @var array
+     */
+    const HOOK_LIST_17 = [
+        'paymentOptions',
+        'actionFrontControllerSetMedia',
         'displayAdminAfterHeader',
         'ActionAdminControllerSetMedia',
-        'actionOrderStatusUpdate',
         'displayExpressCheckout',
         'DisplayFooterProduct',
         'displayPersonalInformationTop',
         'actionBeforeCartUpdateQty',
         'header',
+        'displayInvoiceLegalFreeText',
+    ];
+
+    /**
+     * Hook to install for 1.6
+     *
+     * @var array
+     */
+    const HOOK_LIST_16 = [
+        'payment',
     ];
 
     public $configurationList = [
@@ -79,7 +84,6 @@ class Ps_checkout extends PaymentModule
         'PS_PSX_FIREBASE_REFRESH_TOKEN' => '',
         'PS_PSX_FIREBASE_REFRESH_DATE' => '',
         'PS_CHECKOUT_PSX_FORM' => '',
-        'PS_CHECKOUT_SHOP_UUID_V4' => '',
     ];
 
     public $confirmUninstall;
@@ -88,7 +92,7 @@ class Ps_checkout extends PaymentModule
 
     // Needed in order to retrieve the module version easier (in api call headers) than instanciate
     // the module each time to get the version
-    const VERSION = '1.2.11';
+    const VERSION = '1.3.0';
 
     /**
      * @var \Monolog\Logger
@@ -102,7 +106,7 @@ class Ps_checkout extends PaymentModule
 
         // We cannot use the const VERSION because the const is not computed by addons marketplace
         // when the zip is uploaded
-        $this->version = '1.2.11';
+        $this->version = '1.3.0';
         $this->author = 'PrestaShop';
         $this->need_instance = 0;
 
@@ -113,10 +117,10 @@ class Ps_checkout extends PaymentModule
         parent::__construct();
 
         $this->displayName = $this->l('PrestaShop Checkout');
-        $this->description = $this->l('Provide every payment method to your customer with one module, and manage every sale where your business happens.');
+        $this->description = $this->l('Provide the most commonly used payment methods to your customers in this all-in-one module, and manage all your sales in a centralized interface.');
 
         $this->confirmUninstall = $this->l('Are you sure you want to uninstall this module?');
-        $this->ps_versions_compliancy = ['min' => '1.7', 'max' => _PS_VERSION_];
+        $this->ps_versions_compliancy = ['min' => '1.6.1', 'max' => _PS_VERSION_];
         $this->controllers = [
             'AdminAjaxPrestashopCheckout',
             'AdminPaypalOnboardingPrestashopCheckout',
@@ -130,22 +134,57 @@ class Ps_checkout extends PaymentModule
      */
     public function install()
     {
-        foreach ($this->configurationList as $name => $value) {
-            if ($name === 'PS_CHECKOUT_SHOP_UUID_V4') {
-                $uuid4 = Uuid::uuid4();
-                $value = $uuid4->toString();
-            }
-            Configuration::updateValue($name, $value);
-        }
-
-        return parent::install() &&
+        // Install for both 1.7 and 1.6
+        $defaultInstall = parent::install() &&
+            (new PrestaShop\Module\PrestashopCheckout\ShopUuidManager())->generateForAllShops() &&
+            $this->installConfiguration() &&
             $this->registerHook(self::HOOK_LIST) &&
-            (new OrderStates())->installPaypalStates() &&
-            (new TableManager())->createTable() &&
-            $this->updatePosition(\Hook::getIdByName('paymentOptions'), false, 1) &&
-            $this->addCheckboxCarrierRestrictionsForModule() &&
+            (new PrestaShop\Module\PrestashopCheckout\OrderStates())->installPaypalStates() &&
+            (new PrestaShop\Module\PrestashopCheckout\Database\TableManager())->createTable() &&
             $this->addCheckoutPaymentForAllActivatedCountries() &&
             $this->installTabs();
+
+        if (!$defaultInstall) {
+            return false;
+        }
+
+        // Install specific to prestashop 1.7
+        if ((new PrestaShop\Module\PrestashopCheckout\ShopContext())->isShop17()) {
+            return $this->registerHook(self::HOOK_LIST_17) &&
+                $this->updatePosition(\Hook::getIdByName('paymentOptions'), false, 1) &&
+                $this->addCheckboxCarrierRestrictionsForModule();
+        } else { // Install specific to prestashop 1.6
+            return $this->registerHook(self::HOOK_LIST_16) &&
+                $this->updatePosition(\Hook::getIdByName('payment'), false, 1);
+        }
+
+        return true;
+    }
+
+    /**
+     * Install configuration for each shop
+     *
+     * @return bool
+     */
+    public function installConfiguration()
+    {
+        $result = true;
+
+        foreach (\Shop::getShops(false, null, true) as $shopId) {
+            foreach ($this->configurationList as $name => $value) {
+                if (false === Configuration::hasKey($name, null, null, (int) $shopId)) {
+                    $result = $result && Configuration::updateValue(
+                        $name,
+                        $value,
+                        false,
+                        null,
+                        (int) $shopId
+                    );
+                }
+            }
+        }
+
+        return $result;
     }
 
     /**
@@ -189,7 +228,7 @@ class Ps_checkout extends PaymentModule
         }
 
         return parent::uninstall() &&
-            (new TableManager())->dropTable() &&
+            (new PrestaShop\Module\PrestashopCheckout\Database\TableManager())->dropTable() &&
             $this->uninstallTabs();
     }
 
@@ -249,7 +288,14 @@ class Ps_checkout extends PaymentModule
      */
     private function displayECOnCheckout()
     {
-        if (!(bool) Configuration::get('PS_CHECKOUT_EC_CHECKOUT_PAGE')) {
+        $displayOnCheckout = (bool) Configuration::get(
+            'PS_CHECKOUT_EC_CHECKOUT_PAGE',
+            null,
+            null,
+            (int) \Context::getContext()->shop->id
+        );
+
+        if (!$displayOnCheckout) {
             return false;
         }
 
@@ -262,8 +308,8 @@ class Ps_checkout extends PaymentModule
             return false;
         }
 
-        $expressCheckout = new ExpressCheckout($this, $this->context);
-        $expressCheckout->setDisplayMode(ExpressCheckout::CHECKOUT_MODE);
+        $expressCheckout = new PrestaShop\Module\PrestashopCheckout\ExpressCheckout($this, $this->context);
+        $expressCheckout->setDisplayMode(PrestaShop\Module\PrestashopCheckout\ExpressCheckout::CHECKOUT_MODE);
 
         return $expressCheckout->render();
     }
@@ -273,12 +319,19 @@ class Ps_checkout extends PaymentModule
      */
     public function hookDisplayExpressCheckout()
     {
-        if (!(bool) Configuration::get('PS_CHECKOUT_EC_ORDER_PAGE')) {
+        $displayExpressCheckout = (bool) Configuration::get(
+            'PS_CHECKOUT_EC_ORDER_PAGE',
+            null,
+            null,
+            (int) \Context::getContext()->shop->id
+        );
+
+        if (!$displayExpressCheckout) {
             return false;
         }
 
-        $expressCheckout = new ExpressCheckout($this, $this->context);
-        $expressCheckout->setDisplayMode(ExpressCheckout::CART_MODE);
+        $expressCheckout = new PrestaShop\Module\PrestashopCheckout\ExpressCheckout($this, $this->context);
+        $expressCheckout->setDisplayMode(PrestaShop\Module\PrestashopCheckout\ExpressCheckout::CART_MODE);
 
         return $expressCheckout->render();
     }
@@ -288,34 +341,41 @@ class Ps_checkout extends PaymentModule
      */
     public function hookDisplayFooterProduct($params)
     {
-        if (!(bool) Configuration::get('PS_CHECKOUT_EC_PRODUCT_PAGE')) {
+        $displayOnProductPage = (bool) Configuration::get(
+            'PS_CHECKOUT_EC_PRODUCT_PAGE',
+            null,
+            null,
+            (int) \Context::getContext()->shop->id
+        );
+
+        if (!$displayOnProductPage) {
             return false;
         }
 
-        $expressCheckout = new ExpressCheckout($this, $this->context);
-        $expressCheckout->setDisplayMode(ExpressCheckout::PRODUCT_MODE);
+        $expressCheckout = new PrestaShop\Module\PrestashopCheckout\ExpressCheckout($this, $this->context);
+        $expressCheckout->setDisplayMode(PrestaShop\Module\PrestashopCheckout\ExpressCheckout::PRODUCT_MODE);
 
         return $expressCheckout->render();
     }
 
     public function getContent()
     {
-        $paypalAccount = new PaypalAccountRepository();
-        $psAccount = new PsAccountRepository();
+        $paypalAccount = new PrestaShop\Module\PrestashopCheckout\Repository\PaypalAccountRepository();
+        $psAccount = new PrestaShop\Module\PrestashopCheckout\Repository\PsAccountRepository();
 
         // update merchant status only if the merchant onboarding is completed
         if ($paypalAccount->onbardingIsCompleted()
             && $psAccount->onbardingIsCompleted()) {
             $paypalAccount = $paypalAccount->getOnboardedAccount();
-            (new PaypalAccountUpdater($paypalAccount))->update();
+            (new PrestaShop\Module\PrestashopCheckout\Updater\PaypalAccountUpdater($paypalAccount))->update();
         }
 
         $this->context->smarty->assign([
-            'pathApp' => $this->_path . 'views/js/app.js',
+            'pathApp' => $this->_path . 'views/js/app.js?v=' . $this->version,
         ]);
 
         Media::addJsDef([
-            'store' => json_encode((new StorePresenter($this, $this->context))->present()),
+            'store' => (new PrestaShop\Module\PrestashopCheckout\Presenter\Store\StorePresenter($this, $this->context))->present(),
         ]);
 
         return $this->display(__FILE__, '/views/templates/admin/configuration.tpl');
@@ -330,7 +390,40 @@ class Ps_checkout extends PaymentModule
     }
 
     /**
-     * Add payment option at the checkout in the front office
+     * Add payment option at the checkout in the front office (prestashop 1.7)
+     */
+    public function hookPayment()
+    {
+        $cart = $this->context->cart;
+
+        if (false === $this->active) {
+            return false;
+        }
+
+        if (false === $this->merchantIsValid()) {
+            return false;
+        }
+
+        if (false === $this->checkCurrency($cart)) {
+            return false;
+        }
+
+        $paypalAccountRepository = new PrestaShop\Module\PrestashopCheckout\Repository\PaypalAccountRepository();
+
+        $this->context->smarty->assign([
+            'path' => $this->_path . 'views/img/',
+            'cardIsActive' => $paypalAccountRepository->cardPaymentMethodIsAvailable(),
+            'paypalIsActive' => $paypalAccountRepository->paypalPaymentMethodIsValid(),
+            'paymentOrder' => $this->getPaymentMethods(),
+        ]);
+
+        $this->context->controller->addCss($this->_path . 'views/css/payments16.css');
+
+        return $this->display(__FILE__, '/views/templates/hook/payment.tpl');
+    }
+
+    /**
+     * Add payment option at the checkout in the front office (prestashop 1.7)
      *
      * @param array $params return by the hook
      *
@@ -361,47 +454,54 @@ class Ps_checkout extends PaymentModule
             return $payment_options;
         }
 
-        // Present an improved cart in order to create the payload
-        $cartPresenter = new CartPresenter($this->context);
-        $cartPresenter = $cartPresenter->present();
-
-        // Create the payload
-        $builder = new OrderPayloadBuilder($cartPresenter);
-        $builder->buildFullPayload();
-        $payload = $builder->presentPayload()->getJson();
-
-        // Create the paypal order
-        $paypalOrder = (new Order($this->context->link))->create($payload);
-
-        // Retry with minimal payload when full payload failed
-        if (substr((string) $paypalOrder['httpCode'], 0, 1) === '4') {
-            $builder->buildMinimalPayload();
-            $payload = $builder->presentPayload()->getJson();
-            $paypalOrder = (new Order($this->context->link))->create($payload);
-        }
+        $paypalOrder = new PrestaShop\Module\PrestashopCheckout\Handler\CreatePaypalOrderHandler($this->context);
+        $paypalOrder = $paypalOrder->handle();
 
         if (false === $paypalOrder['status']) {
             return false;
         }
 
-        $paypalAccountRepository = new PaypalAccountRepository();
+        $paypalAccountRepository = new PrestaShop\Module\PrestashopCheckout\Repository\PaypalAccountRepository();
+
+        $termsAndConditionsLinkCms = new \CMS(
+            (int) Configuration::get(
+                'PS_CONDITIONS_CMS_ID',
+                null,
+                null,
+                (int) \Context::getContext()->shop->id
+            ),
+            (int) $this->context->language->id
+        );
+        $termsAndConditionsLink = $this->context->link->getCMSLink(
+            $termsAndConditionsLinkCms,
+            $termsAndConditionsLinkCms->link_rewrite
+        );
+
+        $language = (new PrestaShop\Module\PrestashopCheckout\Adapter\LanguageAdapter())->getLanguage($this->context->language->id);
 
         $this->context->smarty->assign([
             'merchantId' => $paypalAccountRepository->getMerchantId(),
-            'paypalClientId' => (new PaypalEnv())->getPaypalClientId(),
+            'paypalClientId' => (new PrestaShop\Module\PrestashopCheckout\Environment\PaypalEnv())->getPaypalClientId(),
             'clientToken' => $paypalOrder['body']['client_token'],
             'paypalOrderId' => $paypalOrder['body']['id'],
             'validateOrderLinkByCard' => $this->getValidateOrderLink($paypalOrder['body']['id'], 'card'),
             'validateOrderLinkByPaypal' => $this->getValidateOrderLink($paypalOrder['body']['id'], 'paypal'),
-            'cardIsActive' => $paypalAccountRepository->cardPaymentMethodIsValid(),
+            'cardIsActive' => $paypalAccountRepository->cardPaymentMethodIsAvailable(),
             'paypalIsActive' => $paypalAccountRepository->paypalPaymentMethodIsValid(),
-            'intent' => strtolower(Configuration::get('PS_CHECKOUT_INTENT')),
+            'intent' => strtolower(Configuration::get(
+                'PS_CHECKOUT_INTENT',
+                null,
+                null,
+                (int) \Context::getContext()->shop->id
+            )),
+            'locale' => $language['locale'],
             'currencyIsoCode' => $this->context->currency->iso_code,
             'isCardPaymentError' => (bool) Tools::getValue('hferror'),
             'modulePath' => $this->getPathUri(),
             'paypalPaymentOption' => $this->name . '_paypal',
-            'hostedFieldsErrors' => (new HostedFieldsErrors($this))->getHostedFieldsErrors(),
-            'jsPathInitPaypalSdk' => $this->_path . 'views/js/initPaypalAndCard.js',
+            'hostedFieldsErrors' => (new PrestaShop\Module\PrestashopCheckout\HostedFieldsErrors($this))->getHostedFieldsErrors(),
+            'termsAndConditionsLink' => $termsAndConditionsLink,
+            'jsPathInitPaypalSdk' => $this->_path . 'views/js/initPaypalAndCard.js?v=' . $this->version,
         ]);
 
         $paymentMethods = $this->getPaymentMethods();
@@ -429,7 +529,12 @@ class Ps_checkout extends PaymentModule
      */
     public function getPaymentMethods()
     {
-        $paymentMethods = \Configuration::get('PS_CHECKOUT_PAYMENT_METHODS_ORDER');
+        $paymentMethods = \Configuration::get(
+            'PS_CHECKOUT_PAYMENT_METHODS_ORDER',
+            null,
+            null,
+            (int) \Context::getContext()->shop->id
+        );
 
         // if no paymentMethods position is set, by default put credit card (hostedFields) as first position
         if (empty($paymentMethods)) {
@@ -532,7 +637,7 @@ class Ps_checkout extends PaymentModule
             $totalRefund = $totalRefund + $amountDetail['amount'];
         }
 
-        $paypalOrderId = (new OrderMatrice())->getOrderPaypalFromPrestashop($params['order']->id);
+        $paypalOrderId = (new \OrderMatrice())->getOrderPaypalFromPrestashop($params['order']->id);
 
         if (false === $paypalOrderId) {
             $this->context->controller->errors[] = $this->l('Impossible to refund. Cannot find the PayPal Order associated to this order.');
@@ -543,7 +648,7 @@ class Ps_checkout extends PaymentModule
         $currency = Currency::getCurrency($params['order']->id_currency);
         $currencyIsoCode = $currency['iso_code'];
 
-        $refund = new Refund(false, $totalRefund, $paypalOrderId, $currencyIsoCode);
+        $refund = new PrestaShop\Module\PrestashopCheckout\Refund(false, $totalRefund, $paypalOrderId, $currencyIsoCode);
         $refundResponse = $refund->refundPaypalOrder();
 
         if (true === $refundResponse['error']) {
@@ -553,6 +658,7 @@ class Ps_checkout extends PaymentModule
             return false;
         }
 
+        // @todo Add a new negative OrderPayment is wrong !
         $addOrderPayment = $refund->addOrderPayment($params['order'], $refundResponse['body']['id']);
 
         if (false === $addOrderPayment) {
@@ -561,25 +667,40 @@ class Ps_checkout extends PaymentModule
 
         // change the order state to partial refund
         $orderHistory = new \OrderHistory();
-        $orderHistory->id_order = $params['order']->id;
+        $orderHistory->id_order = (int) $params['order']->id;
 
-        $orderHistory->changeIdOrderState(intval(\Configuration::get('PS_CHECKOUT_STATE_PARTIAL_REFUND')), $params['order']->id);
+        $orderHistory->changeIdOrderState(
+            (int) \Configuration::getGlobalValue('PS_CHECKOUT_STATE_PARTIAL_REFUND'),
+            (int) $params['order']->id
+        );
 
-        if (false === $orderHistory->save()) {
+        return $orderHistory->addWithemail();
+    }
+
+    /**
+     * Hook called on OrderState change
+     *
+     * @todo Do not perform Refund here !
+     *
+     * @param array $params
+     *
+     * @return bool
+     */
+    public function hookActionOrderStatusUpdate(array $params)
+    {
+        /** @var \Order $order */
+        $order = new \Order((int) $params['id_order']);
+        /** @var \OrderState $newOrderState */
+        $newOrderState = $params['newOrderStatus'];
+        $newOrderStateId = (int) $newOrderState->id;
+        $refundOrderStateId = (int) \Configuration::get('PS_OS_REFUND');
+
+        // if the new order state is not "Refunded" stop the refund process
+        if ($newOrderStateId !== $refundOrderStateId) {
             return false;
         }
 
-        return true;
-    }
-
-    public function hookActionOrderStatusUpdate($params)
-    {
-        $order = new PrestaShopCollection('Order');
-        $order->where('id_order', '=', $params['id_order']);
-        /** @var \Order $order */
-        $order = $order->getFirst();
-
-        $paypalOrderId = (new OrderMatrice())->getOrderPaypalFromPrestashop($order->id);
+        $paypalOrderId = (new \OrderMatrice())->getOrderPaypalFromPrestashop($order->id);
 
         // if the order is not an order pay with paypal stop the process
         if (false === $paypalOrderId) {
@@ -587,13 +708,9 @@ class Ps_checkout extends PaymentModule
         }
 
         if (false === $this->merchantIsValid()) {
+            // @todo This hook can be called outside of a controller...
             $this->context->controller->errors[] = $this->l('You are not connected to PrestaShop Checkout. Cannot process to a refund.');
 
-            return false;
-        }
-
-        // if the new order state is not "Refunded" stop the refund process
-        if ($params['newOrderStatus']->id !== intval(_PS_OS_REFUND_)) {
             return false;
         }
 
@@ -602,22 +719,26 @@ class Ps_checkout extends PaymentModule
 
         $totalRefund = $order->getTotalPaid();
 
-        $refund = new Refund(false, $totalRefund, $paypalOrderId, $currencyIsoCode);
+        $refund = new PrestaShop\Module\PrestashopCheckout\Refund(false, $totalRefund, $paypalOrderId, $currencyIsoCode);
+        // @todo Do not perform Refund in this hook !
         $refundResponse = $refund->refundPaypalOrder();
 
         if (isset($refundResponse['error'])) {
             if (isset($refundResponse['messages']) && is_array($refundResponse['messages'])) {
+                // @todo This hook can be called outside of a controller...
                 $this->context->controller->errors = array_merge(
                     $this->context->controller->errors,
                     $refundResponse['messages']
                 );
             } else {
+                // @todo This hook can be called outside of a controller...
                 $this->context->controller->errors[] = $refundResponse['message'];
             }
 
             return false;
         }
 
+        // @todo Do not perform Refund in this hook !
         return $refund->doTotalRefund($order, $order->getProducts(), $refundResponse['body']['id']);
     }
 
@@ -628,9 +749,9 @@ class Ps_checkout extends PaymentModule
      */
     public function getPaypalPaymentOption()
     {
-        $paypalPaymentOption = new PaymentOption();
+        $paypalPaymentOption = new PrestaShop\PrestaShop\Core\Payment\PaymentOption();
         $paypalPaymentOption->setModuleName($this->name . '_paypal')
-                            ->setCallToActionText($this->l('Pay by PayPal or other payment methods'))
+                            ->setCallToActionText($this->l('Pay with a PayPal account or other payment methods'))
                             ->setAction($this->context->link->getModuleLink($this->name, 'CreateOrder', [], true))
                             ->setAdditionalInformation($this->generatePaypalForm())
                             ->setLogo(Media::getMediaPath(_PS_MODULE_DIR_ . $this->name . '/views/img/paypal.png'));
@@ -645,6 +766,10 @@ class Ps_checkout extends PaymentModule
      */
     public function generatePaypalForm()
     {
+        $this->smarty->assign([
+            'imgPath' => $this->_path . '/views/img/',
+        ]);
+
         return $this->context->smarty->fetch('module:ps_checkout/views/templates/front/paymentOptions/paypal.tpl');
     }
 
@@ -655,7 +780,7 @@ class Ps_checkout extends PaymentModule
      */
     public function getHostedFieldsPaymentOption()
     {
-        $hostedFieldsPaymentOption = new PaymentOption();
+        $hostedFieldsPaymentOption = new PrestaShop\PrestaShop\Core\Payment\PaymentOption();
         $hostedFieldsPaymentOption->setModuleName($this->name . '_hostedFields')
                     ->setCallToActionText($this->l('Pay by Card'))
                     ->setAction($this->context->link->getModuleLink($this->name, 'ValidateOrder', [], true))
@@ -684,7 +809,7 @@ class Ps_checkout extends PaymentModule
      */
     public function getExpressCheckoutPaymentOption()
     {
-        $expressCheckoutPaymentOption = new PaymentOption();
+        $expressCheckoutPaymentOption = new PrestaShop\PrestaShop\Core\Payment\PaymentOption();
         $expressCheckoutPaymentOption->setModuleName($this->name . '_expressCheckout')
                     ->setCallToActionText($this->l('Pay by Paypal using express checkout'))
                     ->setAction($this->context->link->getModuleLink(
@@ -706,7 +831,8 @@ class Ps_checkout extends PaymentModule
     {
         $this->context->smarty->assign([
             'paypalEmail' => $this->context->cookie->__get('paypalEmail'),
-            'jsHideOtherPaymentOptions' => $this->_path . 'views/js/hideOtherPaymentOptions.js',
+            'jsHideOtherPaymentOptions' => $this->_path . 'views/js/hideOtherPaymentOptions.js?v=' . $this->version,
+            'paypalLogoPath' => $this->_path . 'views/img/paypal_express.png',
         ]);
 
         return $this->context->smarty->fetch(
@@ -719,13 +845,21 @@ class Ps_checkout extends PaymentModule
      */
     public function hookOrderConfirmation($params)
     {
-        if ($params['order']->module !== $this->name) {
+        if ((new PrestaShop\Module\PrestashopCheckout\ShopContext())->isShop17()) {
+            $order = $params['order'];
+        } else {
+            $order = $params['objOrder'];
+        }
+
+        if ($order->module !== $this->name) {
             return false;
         }
 
-        if ($params['order']->valid) {
+        if ($order->valid) {
             $this->context->smarty->assign([
-                'status' => 'ok', 'id_order' => $params['order']->id,
+                'status' => 'ok',
+                'id_order' => $order->id,
+                'shopIs17' => (new PrestaShop\Module\PrestashopCheckout\ShopContext())->isShop17(),
             ]);
         } else {
             $this->context->smarty->assign('status', 'failed');
@@ -769,7 +903,7 @@ class Ps_checkout extends PaymentModule
             return false;
         }
 
-        $link = $this->context->link->getAdminLink(
+        $link = (new PrestaShop\Module\PrestashopCheckout\Adapter\LinkAdapter($this->context->link))->getAdminLink(
             'AdminModules',
             true,
             [],
@@ -808,7 +942,7 @@ class Ps_checkout extends PaymentModule
      *
      * @return string
      */
-    private function getValidateOrderLink($orderId, $paymentMethod)
+    public function getValidateOrderLink($orderId, $paymentMethod)
     {
         return $this->context->link->getModuleLink(
             $this->name,
@@ -817,7 +951,9 @@ class Ps_checkout extends PaymentModule
                 'orderId' => $orderId,
                 'paymentMethod' => $paymentMethod,
             ],
-            true
+            true,
+            null,
+            (int) $this->context->shop->id
         );
     }
 
@@ -828,9 +964,9 @@ class Ps_checkout extends PaymentModule
      */
     public function merchantIsValid()
     {
-        return (new PaypalAccountRepository())->onbardingIsCompleted()
-            && (new PaypalAccountRepository())->paypalEmailIsValid()
-            && (new PsAccountRepository())->onbardingIsCompleted();
+        return (new PrestaShop\Module\PrestashopCheckout\Repository\PaypalAccountRepository())->onbardingIsCompleted()
+            && (new PrestaShop\Module\PrestashopCheckout\Repository\PaypalAccountRepository())->paypalEmailIsValid()
+            && (new PrestaShop\Module\PrestashopCheckout\Repository\PsAccountRepository())->onbardingIsCompleted();
     }
 
     /**
@@ -864,30 +1000,31 @@ class Ps_checkout extends PaymentModule
      */
     public function addCheckboxCarrierRestrictionsForModule(array $shopsList = [])
     {
-        if (!$shopsList) {
+        if (empty($shopsList)) {
             $shopsList = Shop::getShops(true, null, true);
         }
 
         $carriersList = Carrier::getCarriers((int) Context::getContext()->language->id, false, false, false, null, Carrier::ALL_CARRIERS);
-        $allCarriers = [];
-
-        foreach ($carriersList as $carrier) {
-            $allCarriers[] = $carrier['id_reference'];
-        }
+        $allCarriers = array_column($carriersList, 'id_reference');
+        $dataToInsert = [];
 
         foreach ($shopsList as $idShop) {
             foreach ($allCarriers as $idCarrier) {
-                $addModuleInCarrier = Db::getInstance()->execute('INSERT IGNORE
-                    INTO `' . _DB_PREFIX_ . 'module_carrier` (`id_module`, `id_shop`, `id_reference`)
-                    VALUES (' . (int) $this->id . ', "' . (int) $idShop . '", ' . (int) $idCarrier . ')');
-
-                if (!$addModuleInCarrier) {
-                    return false;
-                }
+                $dataToInsert[] = [
+                    'id_reference' => (int) $idCarrier,
+                    'id_shop' => (int) $idShop,
+                    'id_module' => (int) $this->id,
+                ];
             }
         }
 
-        return true;
+        return \Db::getInstance()->insert(
+            'module_carrier',
+            $dataToInsert,
+            false,
+            true,
+            Db::INSERT_IGNORE
+        );
     }
 
     /**
@@ -911,15 +1048,16 @@ class Ps_checkout extends PaymentModule
 
         foreach ($shopsList as $idShop) {
             // Get countries allowed in geolocation management for this shop
-            $activeCountries = \Configuration::get('PS_ALLOWED_COUNTRIES', null, null, (int) $idShop);
+            $activeCountries = \Configuration::get(
+                'PS_ALLOWED_COUNTRIES',
+                null,
+                null,
+                (int) $idShop
+            );
             $explodedCountries = explode(';', $activeCountries);
-            // Get countries already associated with module and shop
-            /** @var array $alreadySelectedCountries */
-            $alreadySelectedCountries = $db->executeS('SELECT `id_country` FROM `' . _DB_PREFIX_ . 'module_country` WHERE `id_module` = ' . (int) $this->id . ' AND `id_shop` = ' . (int) $idShop);
-            $alreadySelectedCountriesIds = array_column($alreadySelectedCountries, 'id_country');
+
             foreach ($explodedCountries as $isoCodeCountry) {
-                // Check if country is not already associated
-                if (isset($countryIdByIso[$isoCodeCountry]) && !in_array($countryIdByIso[$isoCodeCountry], $alreadySelectedCountriesIds)) {
+                if (isset($countryIdByIso[$isoCodeCountry])) {
                     $dataToInsert[] = [
                         'id_country' => (int) $countryIdByIso[$isoCodeCountry],
                         'id_shop' => (int) $idShop,
@@ -929,7 +1067,13 @@ class Ps_checkout extends PaymentModule
             }
         }
 
-        return $db->insert('module_country', $dataToInsert);
+        return $db->insert(
+            'module_country',
+            $dataToInsert,
+            false,
+            true,
+            Db::INSERT_IGNORE
+        );
     }
 
     /**
@@ -941,8 +1085,61 @@ class Ps_checkout extends PaymentModule
             return $this->logger;
         }
 
-        $this->logger = CheckoutLogger::create();
+        $this->logger = PrestaShop\Module\PrestashopCheckout\Factory\CheckoutLogger::create();
 
         return $this->logger;
+    }
+
+    /**
+     * This hook allows to add PayPal OrderId and TransactionId on PDF invoice
+     *
+     * @param array $params
+     *
+     * @return string HTML is not allowed in this hook
+     */
+    public function hookDisplayInvoiceLegalFreeText(array $params)
+    {
+        /** @var \Order $order */
+        $order = $params['order'];
+
+        if (!Validate::isLoadedObject($order)) {
+            return '';
+        }
+
+        $paypalOrderId = (new OrderMatrice())->getOrderPaypalFromPrestashop($order->id);
+
+        // This order has not been paid with this module
+        if (empty($paypalOrderId)) {
+            return '';
+        }
+
+        // Do not display wrong data to invoice
+        if (OrderMatrice::hasInconsistencies($order->id)) {
+            return '';
+        }
+
+        $legalFreeText = $this->l('PayPal Order Id : ', 'translations') . $paypalOrderId . PHP_EOL;
+
+        /** @var \OrderPayment[] $orderPayments */
+        $orderPayments = $order->getOrderPaymentCollection();
+
+        foreach ($orderPayments as $orderPayment) {
+            $legalFreeText .= $this->l('PayPal Transaction Id : ', 'translations') . $orderPayment->transaction_id . PHP_EOL;
+        }
+
+        return $legalFreeText;
+    }
+
+    /**
+     * This hook called after a new Shop is created
+     *
+     * @param array $params
+     */
+    public function hookActionObjectShopAddAfter(array $params)
+    {
+        /** @var Shop $shop */
+        $shop = $params['object'];
+
+        (new PrestaShop\Module\PrestashopCheckout\ShopUuidManager())->generateForShop((int) $shop->id);
     }
 }

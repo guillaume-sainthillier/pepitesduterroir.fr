@@ -1,3 +1,6 @@
+php_value memory_limit 512M
+php_value error_reporting 0
+
 # Use the front controller as index file. It serves as a fallback solution when
 # every other rewrite/redirect fails (e.g. in an aliased environment without
 # mod_rewrite). Additionally, this reduces the matching process for the

@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2019 PrestaShop and Contributors
+ * 2007-2020 PrestaShop and Contributors
  *
  * NOTICE OF LICENSE
  *
@@ -13,7 +13,7 @@
  * to license@prestashop.com so we can send you a copy immediately.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2019 PrestaShop SA and Contributors
+ * @copyright 2007-2020 PrestaShop SA and Contributors
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License 3.0 (AFL-3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -21,7 +21,6 @@
 namespace PrestaShop\Module\PrestashopCheckout;
 
 use PrestaShop\Module\PrestashopCheckout\Api\Payment\Order;
-use PrestaShop\Module\PrestashopCheckout\Entity\OrderMatrice;
 
 /**
  * Class that allow to validate an order
@@ -68,22 +67,40 @@ class ValidateOrder
      */
     public function validateOrder($payload)
     {
+        // API call here
         $paypalOrder = new PaypalOrder($this->paypalOrderId);
         $order = $paypalOrder->getOrder();
+
+        if (empty($order)) {
+            // @todo quickfix : Call API return nothing or fail
+            $message = sprintf('Unable to retrieve Paypal Order for %s', $this->paypalOrderId);
+            \PrestaShopLogger::addLog($message, 1, null, null, null, true);
+            throw new PsCheckoutException($message);
+        }
+
         $apiOrder = new Order(\Context::getContext()->link);
 
         switch ($paypalOrder->getOrderIntent()) {
             case self::INTENT_CAPTURE:
+                // API call here
                 $response = $apiOrder->capture($order['id'], $this->merchantId);
                 break;
             case self::INTENT_AUTHORIZE:
+                // API call here
                 $response = $apiOrder->authorize($order['id'], $this->merchantId);
                 break;
             default:
-                throw new \Exception(sprintf('Unknown Intent type %s', $paypalOrder->getOrderIntent()));
+                // @todo quickfix
+                $message = sprintf('Unknown Intent type %s, Paypal Order %s', $paypalOrder->getOrderIntent(), $this->paypalOrderId);
+                \PrestaShopLogger::addLog($message, 1, null, null, null, true);
+                throw new PsCheckoutException($message);
         }
 
         if (false === $response['status']) {
+            // @todo Quickfix
+            $message = sprintf('Unable to capture/authorize Paypal Order %s', $this->paypalOrderId);
+            \PrestaShopLogger::addLog($message, 1, null, null, null, true);
+
             return false;
         }
 
@@ -96,15 +113,19 @@ class ValidateOrder
             $payload['amount'],
             $this->getPaymentMessageTranslation($payload['paymentMethod'], $module),
             null,
-            $payload['extraVars'],
+            [
+                'transaction_id' => $response['body']['id'],
+            ],
             $payload['currencyId'],
             false,
             $payload['secureKey']
         );
 
-        if (false === $this->setOrdersMatrice($module->currentOrder, $payload['extraVars']['transaction_id'])) {
+        if (false === $this->setOrdersMatrice($module->currentOrder, $this->paypalOrderId)) {
             $this->setOrderState($module->currentOrder, self::CAPTURE_STATUS_DECLINED, $payload['paymentMethod']);
-            throw new \Exception(sprintf('Set Order Matrice error for Prestashop Order ID : %s and Paypal Order ID : %s', $module->currentOrder, $payload['extraVars']['transaction_id']));
+            $message = sprintf('Set Order Matrice error for Prestashop Order ID : %s and Paypal Order ID : %s', $module->currentOrder, $this->paypalOrderId);
+            \PrestaShopLogger::addLog($message, 1, null, null, null, true);
+            throw new PsCheckoutException($message);
         }
 
         // TODO : patch the order in order to update the order id with the order id
@@ -117,6 +138,7 @@ class ValidateOrder
         );
 
         if ($orderState === _PS_OS_PAYMENT_) {
+            // @todo this may be useless, previous $module->validateOrder() should save transaction id
             $this->setTransactionId($module->currentOrderReference, $response['body']['id']);
         }
 
@@ -152,7 +174,7 @@ class ValidateOrder
      */
     private function setOrdersMatrice($orderPrestashopId, $orderPaypalId)
     {
-        $orderMatrice = new OrderMatrice();
+        $orderMatrice = new \OrderMatrice();
         $orderMatrice->id_order_prestashop = $orderPrestashopId;
         $orderMatrice->id_order_paypal = $orderPaypalId;
 
@@ -193,8 +215,8 @@ class ValidateOrder
      */
     private function setOrderState($orderId, $status, $paymentMethod)
     {
-        $order = new \OrderHistory();
-        $order->id_order = $orderId;
+        $orderHistory = new \OrderHistory();
+        $orderHistory->id_order = $orderId;
 
         switch ($status) {
             case self::CAPTURE_STATUS_COMPLETED:
@@ -211,8 +233,8 @@ class ValidateOrder
                 break;
         }
 
-        $order->changeIdOrderState($orderState, $orderId);
-        $order->save();
+        $orderHistory->changeIdOrderState($orderState, $orderId);
+        $orderHistory->addWithemail();
 
         return $orderState;
     }
@@ -226,10 +248,10 @@ class ValidateOrder
      */
     private function getPendingStatusId($paymentMethod)
     {
-        $stateId = \Configuration::get('PS_CHECKOUT_STATE_WAITING_CREDIT_CARD_PAYMENT');
+        $stateId = \Configuration::getGlobalValue('PS_CHECKOUT_STATE_WAITING_CREDIT_CARD_PAYMENT');
 
         if ($paymentMethod === self::PAYMENT_METHOD_PAYPAL) {
-            $stateId = \Configuration::get('PS_CHECKOUT_STATE_WAITING_PAYPAL_PAYMENT');
+            $stateId = \Configuration::getGlobalValue('PS_CHECKOUT_STATE_WAITING_PAYPAL_PAYMENT');
         }
 
         return intval($stateId);

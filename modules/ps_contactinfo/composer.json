@@ -2,7 +2,7 @@
   "name": "prestashop/ps_contactinfo",
   "description": "PrestaShop module ps_contactinfo",
   "homepage": "https://github.com/PrestaShop/ps_contactinfo",
-  "license": "AFL-3.0",
+  "license": "AFL - Academic Free License (AFL 3.0)",
   "authors": [
     {
       "name": "PrestaShop SA",

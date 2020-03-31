@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2019 PrestaShop and Contributors
+ * 2007-2020 PrestaShop and Contributors
  *
  * NOTICE OF LICENSE
  *
@@ -13,7 +13,7 @@
  * to license@prestashop.com so we can send you a copy immediately.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2019 PrestaShop SA and Contributors
+ * @copyright 2007-2020 PrestaShop SA and Contributors
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License 3.0 (AFL-3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -29,10 +29,14 @@ class CheckoutLogger
 
     public static function create()
     {
-        $path = version_compare(_PS_VERSION_, '1.7.4', '>=')
-            ? _PS_ROOT_DIR_ . '/var/logs/ps_checkout'
-            : _PS_ROOT_DIR_ . '/app/logs/ps_checkout'
-        ;
+        $path = _PS_ROOT_DIR_ . '/var/logs/ps_checkout';
+
+        if (version_compare(_PS_VERSION_, '1.7', '<')) {
+            $path = _PS_ROOT_DIR_ . '/log/ps_checkout';
+        } elseif (version_compare(_PS_VERSION_, '1.7.4', '<')) {
+            $path = _PS_ROOT_DIR_ . '/app/logs/ps_checkout';
+        }
+
         $rotatingFileHandler = new RotatingFileHandler(
             $path,
             static::MAX_FILES

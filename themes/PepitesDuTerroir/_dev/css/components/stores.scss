@@ -1,0 +1,42 @@
+#stores {
+  .page-stores {
+    width: 85%;
+    margin-left: auto;
+    margin-right: auto;
+
+  }
+}
+.store-item {
+  + .store-item {
+    margin-top: 20px;
+  }
+  .store-contact-info {
+    li {
+      padding: 3px 0;
+    }
+    i {
+      width: 20px;
+    }
+  }
+  .store-working-hours {
+    table {
+      width: 100%;
+    }
+  }
+}
+
+/*** Responsive part ***/
+@include media-breakpoint-down(sm) {
+  #stores {
+    .page-stores {
+      width: 100%;
+    }
+  }
+}
+@include media-breakpoint-down(md) {
+  .store-item {
+    .store-description, .store-working-hours {
+      margin-top: 20px;
+    }
+  }
+}

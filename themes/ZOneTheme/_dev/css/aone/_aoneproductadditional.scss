@@ -1,0 +1,29 @@
+.zone-product-extra-fields {
+  .extra-field-type-modal {
+    .extra-title {
+      text-transform: none;
+      text-decoration: none;
+      padding: 0;
+      font-weight: 700;
+      border-radius: 0;
+      min-height: $base-height;
+      font-size: 90%;
+      background: linear-gradient(to right, #ececec, #ffffff);
+      img {
+        max-height: $base-height;
+        width: auto;
+      }
+      span {
+        padding-left: 5px;
+      }
+    }
+  }
+  .product-right-extra-field {
+    + .product-right-extra-field {
+      margin-top: 20px;
+    }
+  }
+  &.hook-AfterProductThumbs {
+    margin-top: 30px;
+  }
+}

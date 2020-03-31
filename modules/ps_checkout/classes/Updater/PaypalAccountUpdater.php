@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2019 PrestaShop and Contributors
+ * 2007-2020 PrestaShop and Contributors
  *
  * NOTICE OF LICENSE
  *
@@ -13,7 +13,7 @@
  * to license@prestashop.com so we can send you a copy immediately.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2019 PrestaShop SA and Contributors
+ * @copyright 2007-2020 PrestaShop SA and Contributors
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License 3.0 (AFL-3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -23,6 +23,7 @@ namespace PrestaShop\Module\PrestashopCheckout\Updater;
 use PrestaShop\Module\PrestashopCheckout\Api\Payment\Shop;
 use PrestaShop\Module\PrestashopCheckout\Entity\PaypalAccount;
 use PrestaShop\Module\PrestashopCheckout\PersistentConfiguration;
+use PrestaShop\Module\PrestashopCheckout\PsCheckoutException;
 
 /**
  * Check and set the merchant status
@@ -48,7 +49,7 @@ class PaypalAccountUpdater
         $merchantId = $account->getMerchantId();
 
         if (empty($merchantId)) {
-            throw new \PrestaShopException('MerchantId cannot be empty');
+            throw new PsCheckoutException('MerchantId cannot be empty');
         }
 
         $this->setAccount($account);
@@ -62,7 +63,12 @@ class PaypalAccountUpdater
         $merchantIntegration = $this->getMerchantIntegration();
 
         if (false === $merchantIntegration) {
-            return false;
+            $this->account->setEmail('');
+            $this->account->setEmailIsVerified('');
+            $this->account->setPaypalPaymentStatus('');
+            $this->account->setCardPaymentStatus('');
+
+            return (new PersistentConfiguration())->savePaypalAccount($this->account);
         }
 
         $this->account->setEmail($merchantIntegration['primary_email']);

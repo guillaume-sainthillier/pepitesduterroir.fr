@@ -1,0 +1,23 @@
+.flex-scrollbox-wrapper {
+  overflow: hidden;
+  > div:first-child, > ul:first-child {
+    flex-wrap: nowrap;
+  }
+}
+.scroll-box-arrows {
+  display: none;
+  transition: all 0.3s;
+  &.scroll {
+    display: block;
+  }
+  .left, .right {
+    cursor: pointer;
+    user-select: none;
+  }
+}
+[data-autoscroll="true"] + .scroll-box-arrows {
+  opacity: 0;
+}
+.flex-scrollbox-wrapper:hover + .scroll-box-arrows, .scroll-box-arrows:hover {
+  opacity: 1;
+}

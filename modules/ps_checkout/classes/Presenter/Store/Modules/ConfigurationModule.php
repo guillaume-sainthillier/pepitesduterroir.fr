@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2019 PrestaShop and Contributors
+ * 2007-2020 PrestaShop and Contributors
  *
  * NOTICE OF LICENSE
  *
@@ -13,7 +13,7 @@
  * to license@prestashop.com so we can send you a copy immediately.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2019 PrestaShop SA and Contributors
+ * @copyright 2007-2020 PrestaShop SA and Contributors
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License 3.0 (AFL-3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -37,14 +37,49 @@ class ConfigurationModule implements PresenterInterface
         $configurationModule = [
             'config' => [
                 'paymentMethods' => $this->getPaymentMethods(),
-                'captureMode' => \Configuration::get('PS_CHECKOUT_INTENT'),
-                'paymentMode' => \Configuration::get('PS_CHECKOUT_MODE'),
-                'cardIsEnabled' => (bool) \Configuration::get('PS_CHECKOUT_CARD_PAYMENT_ENABLED'),
-                'debugLogsEnabled' => (bool) \Configuration::get('PS_CHECKOUT_DEBUG_LOGS_ENABLED'),
+                'captureMode' => \Configuration::get(
+                    'PS_CHECKOUT_INTENT',
+                    null,
+                    null,
+                    (int) \Context::getContext()->shop->id
+                ),
+                'paymentMode' => \Configuration::get(
+                    'PS_CHECKOUT_MODE',
+                    null,
+                    null,
+                    (int) \Context::getContext()->shop->id
+                ),
+                'cardIsEnabled' => (bool) \Configuration::get(
+                    'PS_CHECKOUT_CARD_PAYMENT_ENABLED',
+                    null,
+                    null,
+                    (int) \Context::getContext()->shop->id
+                ),
+                'debugLogsEnabled' => (bool) \Configuration::get(
+                    'PS_CHECKOUT_DEBUG_LOGS_ENABLED',
+                    null,
+                    null,
+                    (int) \Context::getContext()->shop->id
+                ),
                 'expressCheckout' => [
-                    'orderPage' => (bool) \Configuration::get('PS_CHECKOUT_EC_ORDER_PAGE'),
-                    'checkoutPage' => (bool) \Configuration::get('PS_CHECKOUT_EC_CHECKOUT_PAGE'),
-                    'productPage' => (bool) \Configuration::get('PS_CHECKOUT_EC_PRODUCT_PAGE'),
+                    'orderPage' => (bool) \Configuration::get(
+                        'PS_CHECKOUT_EC_ORDER_PAGE',
+                        null,
+                        null,
+                        (int) \Context::getContext()->shop->id
+                    ),
+                    'checkoutPage' => (bool) \Configuration::get(
+                        'PS_CHECKOUT_EC_CHECKOUT_PAGE',
+                        null,
+                        null,
+                        (int) \Context::getContext()->shop->id
+                    ),
+                    'productPage' => (bool) \Configuration::get(
+                        'PS_CHECKOUT_EC_PRODUCT_PAGE',
+                        null,
+                        null,
+                        (int) \Context::getContext()->shop->id
+                    ),
                 ],
             ],
         ];
@@ -59,7 +94,12 @@ class ConfigurationModule implements PresenterInterface
      */
     private function getPaymentMethods()
     {
-        $paymentMethods = \Configuration::get('PS_CHECKOUT_PAYMENT_METHODS_ORDER');
+        $paymentMethods = \Configuration::get(
+            'PS_CHECKOUT_PAYMENT_METHODS_ORDER',
+            null,
+            null,
+            (int) \Context::getContext()->shop->id
+        );
 
         if (empty($paymentMethods)) {
             $paymentMethods = [

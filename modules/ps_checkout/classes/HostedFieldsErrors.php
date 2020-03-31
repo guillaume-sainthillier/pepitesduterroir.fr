@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2019 PrestaShop and Contributors
+ * 2007-2020 PrestaShop and Contributors
  *
  * NOTICE OF LICENSE
  *
@@ -13,7 +13,7 @@
  * to license@prestashop.com so we can send you a copy immediately.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2019 PrestaShop SA and Contributors
+ * @copyright 2007-2020 PrestaShop SA and Contributors
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License 3.0 (AFL-3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -45,10 +45,10 @@ class HostedFieldsErrors
     {
         //TODO: Complete with all error code possible - waiting response from paypal
         $errors = [
-            'INVALID_STRING_LENGTH' => $this->module->l('Invalid format, check your bank details and try again'),
-            'INVALID_EXPIRATION_YEAR' => $this->module->l('Expiration year must be between now and 2099'),
-            'INVALID_PARAMETER_SYNTAX' => $this->module->l('Invalid format, check your bank details and try again'),
-            'TRANSACTION_NOT_SUPPORTED' => $this->module->l('This transaction is currently not supported. Please contact customer service or your account manager for more information.'),
+            'INVALID_STRING_LENGTH' => $this->module->l('Invalid format, check your bank details and try again', 'hostedfieldserrors'),
+            'INVALID_EXPIRATION_YEAR' => $this->module->l('Expiration year must be between now and 2099', 'hostedfieldserrors'),
+            'INVALID_PARAMETER_SYNTAX' => $this->module->l('Invalid format, check your bank details and try again', 'hostedfieldserrors'),
+            'TRANSACTION_NOT_SUPPORTED' => $this->module->l('This transaction is currently not supported. Please contact customer service or your account manager for more information.', 'hostedfieldserrors'),
         ];
 
         return json_encode($errors);

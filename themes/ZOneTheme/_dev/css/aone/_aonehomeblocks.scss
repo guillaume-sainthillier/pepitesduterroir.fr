@@ -1,0 +1,52 @@
+.aone-homepage {
+  .product-list {
+    .list {
+      &.columns-2 {
+        .product-miniature {
+          @include media-breakpoint-up(lg) {
+            @include make-col(1, 2);
+          }
+          .layout-left-column .main-content &, .layout-right-column .main-content & {
+            @include media-breakpoint-only(lg) {
+              @include make-col(1, 1);
+            }
+          }
+
+          .first-block {
+            @include media-breakpoint-only(lg) {
+              max-width: 212px;
+            }
+            @include media-breakpoint-only(xl) {
+              max-width: 230px;
+            }
+          }
+          .second-block {
+          }
+          .product-description-short {
+            max-height: ($font-size-root * $line-height-base * 2);
+            overflow: hidden;
+          }
+          .product-availability {
+            display: none;
+          }
+          .product-price-and-shipping .third-prices {
+            width: 100%;
+            margin-left: 0;
+          }
+
+          .layout-left-column .main-content &, .layout-right-column .main-content & {
+            @include media-breakpoint-only(xl) {
+              .product-price {
+                font-size: initial;
+              }
+              .first-block {
+                max-width: 212px;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+  

@@ -1,0 +1,51 @@
+@import "_aonemegamenu";
+@import "_aoneslideshow";
+@import "_aonehomeblocks";
+@import "_aonefeaturedcategories";
+@import "_aonebrandlogo";
+@import "_aonepopupnewsletter";
+@import "_aonecolorsfonts";
+@import "_aoneproductadditional";
+@import "_aonethememanager";
+
+.typo-image-slider {
+  position: relative;
+  .js-typoImageSlider {
+    overflow: hidden;
+    > ul {
+      display: flex;
+      flex-wrap: nowrap;
+      list-style: none;
+      padding-left: 0;
+      padding-right: 0;
+      margin-bottom: 0;
+        > li {
+          @include make-col(1, 1);
+          padding: 0;
+          img {
+            margin: 0 auto;
+            display: block;
+          }
+        }
+    }      
+  }
+  .scroll-box-arrows {
+    z-index: 10;
+    .left, .right {
+      position: absolute;
+      top: 50%;
+      margin-top: -10px;
+      font-size: 40px;
+      background: $icon-color;
+      color: $light-text-color;
+      border-radius: 50%;
+    }
+    .left {
+      left: 0;
+    }
+    .right {
+      right: 0;
+    }
+  }
+}
+  

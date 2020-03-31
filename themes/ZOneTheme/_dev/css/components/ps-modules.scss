@@ -1,0 +1,328 @@
+//@import "_imageslider";
+//@import "_mainmenu";
+//@import "_featuredproducts";
+@import "_block-reassurance";
+@import "_search-widget";
+@import "_ps_socialfollow";
+@import "_ps_emailsubscription";
+@import "_ps_sharebuttons";
+@import "_ps_shoppingcart";
+@import "_aeuc_front";
+
+.currency-selector-wrapper, .language-selector-wrapper {
+}
+.currency-selector-wrapper + .language-selector-wrapper, .language-selector-wrapper + .currency-selector-wrapper {
+  margin-left: 5px;
+}
+.currency-selector, .language-selector {
+  .dropdown-current {
+    padding: 5px 8px;
+    background-color: $color_gray;
+    border-radius: 3px;
+  }
+  .dropdown-icon {
+    .material-icons, .fa {
+      font-size: 15px;
+    }
+  }
+  .dropdown-menu {
+    min-width: 0;
+  }
+}
+.language-selector {
+  #language-selector-label {
+    display: none;
+  }
+  .l-code {
+    display: none;
+  }
+  .l-name {
+    display: flex;
+  }
+  img {
+    margin-top: -2px;
+  }
+}
+.currency-selector {
+  #currency-selector-label {
+    display: none;
+  }
+  .dropdown-menu {
+  }
+  .c-sign {
+    display: inline-block;
+  }
+}
+.sidebar-currency {
+  border-top: 1px solid $border-color;
+  padding: 20px 10px;
+  .currency-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    li {
+      margin: 0 3px;
+    }
+    .dropdown-item {
+      border-radius: 5px;
+      padding: 5px 8px;
+    }
+    .current .dropdown-item {
+      background: $color_green;
+      color: $light-text-color;
+    }
+  }
+  .c-sign {
+    display: none;
+  } 
+}
+.sidebar-language {
+  border-top: 1px solid $border-color;
+  padding: 20px 10px;
+  .l-name {
+    display: none;
+  }
+  .language-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    li {
+      margin: 0 3px;
+    }
+    .dropdown-item {
+      border-radius: 5px;
+      padding: 5px 8px;
+      text-transform: uppercase;
+      min-width: 40px;
+      text-align: center;
+    }
+    .current .dropdown-item {
+      background: $color_green;
+      color: $light-text-color;
+    }
+  }
+}
+
+.user-info {
+  text-align: center;
+  .account-link {
+    border: 2px solid;
+    border-radius: 3px;
+    > a {
+      display: flex;
+      align-items: center;
+      padding: $base-padding-border2px 7px;
+      font-size: 0.875rem;
+      white-space: nowrap;
+      > span {
+        padding: 0 2px;
+      }
+      .material-icons {
+        font-size: 120%;
+        margin-top: 0;
+        height: 100%;
+        line-height: inherit;
+      }
+    }
+  }
+  .logout-link {
+    display: none;
+  }
+  .dropdown-customer-account-links {
+    position: absolute;
+    top: 110%;
+    right: 0;
+    min-width: 100%;
+    z-index: 1000;
+    visibility: hidden;
+    opacity: 0;
+    .dropdown-menu {
+      display: block;
+      width: 100%;
+      position: initial;
+      border: 2px solid;
+      border-radius: 3px 0 3px 3px;
+    }
+    .dropdown-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 3px;
+      i, span {
+        margin: 0 5px;
+      }
+      i {
+        font-size: 15px;
+      }
+    }
+    .logout {
+      padding: $base-padding;
+      text-align: center;
+      color: red;
+      border-top: 1px solid $border-color;
+      i {
+        min-width: 18px;
+      }
+    }
+  }
+  .customer-logged {
+    position: relative;
+    &:hover, .hover {
+      .dropdown-customer-account-links {
+        visibility: visible;
+        opacity: 1;
+        top: calc(100% - 2px);
+        transition: all 0.3s;
+      }
+    }
+  }
+}
+
+.sidebar-account {
+  padding: 20px 10px;
+  border-top: 1px solid $border-color;
+  background: $color_gray;
+  &.user-info {
+    > ul >li {
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+    }
+    .account-link {
+    }
+    .logout-link {
+      display: block;
+      color: red;
+    }
+    .dropdown-customer-account-links {
+      display: none;
+    }
+  }
+}
+.sidebar-header-phone {
+  padding: 15px 5px;
+  border-top: 1px solid $border-color;
+  background: $color_gray;
+  ul {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    li {
+      white-space: nowrap;
+      padding: 8px 12px;
+    }
+  }
+}
+.st-menu-title {
+  background: $color_gray;
+}
+.sidebar-menu {
+  padding: 15px;
+  border-top: 1px solid $border-color;
+  .waiting-load-categories {
+    height: 50px;
+    background: transparent url('../img/loading.gif') no-repeat 50% 50%;
+  }
+}
+.sidebar-category-tree.category-tree {
+  .category-sub-menu {
+    display: none;
+  }
+}
+
+.left-brand-list, .left-supplier-list {
+  .linklist {
+    margin-top: -3px;
+  }
+}
+
+.mailalert-product-page {
+  .mailalert-form {
+    &.disable {
+      pointer-events: none;
+      opacity: 0.5;
+    }
+  }
+  .alert-email {
+    width: 100%;
+    margin-right: 3%;
+  }
+  .alert-button {
+    .btn {
+      text-transform: none;
+      padding-left: 15px;
+      padding-right: 15px;
+    }
+  }
+  .mailalert-msg {
+    padding: 8px;
+    margin-top: 5px;
+    margin-bottom: 0;
+  }
+  @include media-breakpoint-down(md) {
+    .mailalert-form {
+      flex-direction: column;
+    }
+    .alert-email {
+      width: 100%;
+    }
+    .alert-button {
+      margin-top: 5px;
+      margin-left: 0;
+    }
+  }
+}
+
+.my-mail-alerts {
+  padding-top: 0;
+  padding-bottom: 0;
+  .mail-alert-line {
+    padding: $box-padding 0;
+    + .mail-alert-line {
+      border-top: 1px solid $border-color-lighten;
+    }
+    .p-image img {
+      max-width: 80px;
+    }
+    .p-name {
+      margin-left: 10px;
+    }
+    .p-remove {
+      margin-left: auto;
+    }
+  }
+}
+
+.mobile-header-version {
+  .customer-signin-module {
+    position: absolute;
+    right: 0;
+    top: -34px;
+  }
+  .user-info {
+    .account-link {
+      border-width: 1px;
+      > a {
+        padding: 5px 6px;
+        font-size: inherit;
+        line-height: normal;
+        i {
+          font-size: 15px;
+          margin-right: 0;
+        }
+      }
+    }
+    .dropdown-customer-account-links {
+      display: none;
+    }
+  }
+  .currency-selector, .language-selector {
+    .dropdown-current {
+      padding: 3px 5px;
+    }
+    .dropdown-item {
+      padding-left: 5px;
+      padding-right: 5px;
+    }
+  }
+}

@@ -1,0 +1,17 @@
+.contact-rich {
+  hr {
+    border-style: dashed;
+  }
+  .info-line {
+    display: flex;
+    align-items: center;
+    .icon {
+      width: 3rem;
+      i {
+        font-size: 2rem;
+      }
+    }
+    .data {
+    }
+  }
+}

@@ -104,13 +104,6 @@ class SearchTest extends MockeryTestCase
                         ],
                     ],
                 ],
-                'id_category' => [
-                    '=' => [
-                        [
-                            null,
-                        ],
-                    ],
-                ],
                 'id_shop' => [
                     '=' => [
                         [
@@ -240,9 +233,6 @@ class SearchTest extends MockeryTestCase
                 'id_category' => [
                     '=' => [
                         [
-                            null,
-                        ],
-                        [
                             6,
                         ],
                     ],
@@ -271,7 +261,7 @@ class SearchTest extends MockeryTestCase
                         ],
                     ],
                 ],
-                'with_attributes_0' => [
+                'with_attributes' => [
                     [
                         [
                             'id_attribute',
@@ -282,7 +272,7 @@ class SearchTest extends MockeryTestCase
                         ],
                     ],
                 ],
-                'with_features_0' => [
+                'with_features' => [
                     [
                         [
                             'id_feature_value',
@@ -316,8 +306,7 @@ class SearchTest extends MockeryTestCase
         $this->search->initSearch(
             [
                 'id_feature' => [
-                    [1],
-                    [2, 3, 4],
+                    [[1], [2, 3, 4]],
                 ],
             ]
         );
@@ -348,42 +337,30 @@ class SearchTest extends MockeryTestCase
                         ],
                     ],
                 ],
-                'id_category' => [
-                    '=' => [
-                        [
-                            null,
-                        ],
-                    ],
-                ],
             ],
             $this->search->getSearchAdapter()->getInitialPopulation()->getFilters()->toArray()
         );
 
         $this->assertEquals(
             [
-                'with_features_0' => [
+                'with_features' => [
                     [
                         [
                             'id_feature_value',
                             [
-                                1,
+                                [
+                                    1,
+                                ],
+                                [
+                                    2,
+                                    3,
+                                    4,
+                                ],
                             ],
                         ],
                     ],
                 ],
-                'with_features_1' => [
-                    [
-                        [
-                            'id_feature_value',
-                            [
-                                2,
-                                3,
-                                4,
-                            ],
-                        ],
-                    ],
-                ],
-           ],
+            ],
             $this->search->getSearchAdapter()->getInitialPopulation()->getOperationsFilters()->toArray()
         );
     }
@@ -406,8 +383,7 @@ class SearchTest extends MockeryTestCase
         $this->search->initSearch(
             [
                 'id_attribute_group' => [
-                    [1],
-                    [2, 3, 4],
+                    [[1], [2, 3, 4]],
                 ],
             ]
         );
@@ -438,37 +414,25 @@ class SearchTest extends MockeryTestCase
                         ],
                     ],
                 ],
-                'id_category' => [
-                    '=' => [
-                        [
-                            null,
-                        ],
-                    ],
-                ],
             ],
             $this->search->getSearchAdapter()->getInitialPopulation()->getFilters()->toArray()
         );
 
         $this->assertEquals(
             [
-                'with_attributes_0' => [
+                'with_attributes' => [
                     [
                         [
                             'id_attribute',
                             [
-                                1,
-                            ],
-                        ],
-                    ],
-                ],
-                'with_attributes_1' => [
-                    [
-                        [
-                            'id_attribute',
-                            [
-                                2,
-                                3,
-                                4,
+                                [
+                                    1,
+                                ],
+                                [
+                                    2,
+                                    3,
+                                    4,
+                                ],
                             ],
                         ],
                     ],

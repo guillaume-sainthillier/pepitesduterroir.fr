@@ -1,0 +1,27 @@
+#index #wrapper {
+  background-color: $darkShades;
+}
+
+#index {
+  .aone-homepage {
+	color: $lightShades;
+
+	h2 {
+	  color: $lightAccent;
+	}
+  }
+}
+
+.home-blocks-top {
+  margin-bottom: 2rem;
+}
+
+.block_id_1 {
+  .title-block {
+	color: $lightAccent;
+  }
+
+  a {
+	color: $lightShades;
+  }
+}

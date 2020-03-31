@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" version="1.2">
+  <file original="/Applications/XAMPP/xamppfiles/htdocs/zone/web/backoffice" source-language="sv-SE" target-language="sv-SE" datatype="plaintext">
+    <body>
+      <trans-unit id="831a28f1e8df07c553fcd59546465d13">
+        <source>Buy</source>
+        <target>Köpa</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="4351cfebe4b61d8aa5efa1d020710005">
+        <source>View</source>
+        <target>Vy</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="6e9783376d951cfd780e9fdb67a0f02c">
+        <source>View details</source>
+        <target>Visa detaljer</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="b61541208db7fa7dba42c85224405911">
+        <source>Menu</source>
+        <target>Meny</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="5174d1309f275ba6f275db3af9eb3e18">
+        <source>Grid</source>
+        <target>Rutnät</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="4ee29ca12c7d126654bd0e5275de6135">
+        <source>List</source>
+        <target>Listan</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="51c45b795d5d18a3e4e0c37e8b20a141">
+        <source>Table</source>
+        <target>Tabell</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="f73cc399b5ce12735a57f03414f09ef9">
+        <source>Subcategories</source>
+        <target>Underkategorier</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="dd6943d5e59c8fedde4adb05e0a124f6">
+        <source>Popular Brands</source>
+        <target>Populära varumärken</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="0a18f0aa51f30f1107495bf639caf16c">
+        <source>Shop Now</source>
+        <target>Shoppa nu</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="96b4cf26fa238554ffbc7cefc17a5250">
+        <source>Featured Categories</source>
+        <target>Utvalda kategorier</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="925dc7757bc7a9926f13546bb8260267">
+        <source>Show More</source>
+        <target>Visa mer</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="e202ca64fbdafd978aadd3d2e9db7aad">
+        <source>Do not show this popup again.</source>
+        <target>Visa inte det här meddelandet igen.</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="e58c27818bf68b1f92513ad4f99972c4">
+        <source>Back to Top</source>
+        <target>Tillbaka till toppen</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="c4408d335012a56ff58937d78050efad">
+        <source>Accept</source>
+        <target>Acceptera</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="3ec365dd533ddb7ef3d1c111186ce872">
+        <source>Details</source>
+        <target>Detaljer</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="f345838ec9ca8e62bffa777d31761bcd">
+        <source>Special offer ends in</source>
+        <target>Specialerbjudandet slutar gälla i</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="628b7db04235f228d40adc671413a8c8">
+        <source>day</source>
+        <target>dag</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="44fdec47036f482b68b748f9d786801b">
+        <source>days</source>
+        <target>dagar</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="47ae95238e4c515d3a82bdfbb09461ce">
+        <source>This offer has expired!</source>
+        <target>Detta erbjudande har löpt ut!</target>
+        <note>Line: </note>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>

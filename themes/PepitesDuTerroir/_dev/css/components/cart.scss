@@ -1,0 +1,176 @@
+#cart .cart-preview {
+  .cart-dropdown {
+    display: none !important;
+  }
+}
+
+/** CART BODY **/
+.cart-grid {
+}
+.cart-grid-body {
+}
+.cart-container {
+  position: relative;
+}
+.cart-container-wrapper {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.cart-items {
+}
+.cart-item {
+  padding: 10px 0;
+  + .cart-item {
+    border-top: 1px solid $border-color-lighten;
+  }
+
+  .product-name {
+    padding: 0;
+    a.label {
+      font-size: 100%;
+      text-transform: initial;
+    }
+  }
+  .product-prices {
+    display: flex;
+    .price {
+      font-size: 0.825rem;
+    }
+  }
+  .unit-price-cart {
+    font-size: 90%;
+  }
+  .product-line-info {
+    line-height: 18px;
+    &:first-child {
+      margin-top: 8px;
+    }
+    .material-icons {
+      font-size: 15px;
+      margin-left: -3px;
+    }
+  }
+}
+.cart-overview .no-items {
+  padding: $box-padding;
+  border: none;
+  border-radius: 5px;
+}
+.cart-continue-shopping {
+  margin-top: 30px;
+}
+
+.product-line-grid {
+  align-items: center;
+  .row {
+    align-items: center;
+  }
+  .product-line-grid-body {
+    padding-left: 0;
+  }
+  .product-line-grid-right {
+  }
+  .product-price {
+    font-size: 1rem;
+  }
+  .cart-line-product-actions {
+    .remove-from-cart {
+      font-size: 1rem;
+    }
+  }
+  .product-quantity {
+    .bootstrap-touchspin.input-group {
+      max-width: 112px;
+    }
+  }
+}
+
+
+/** CART RIGHT **/
+.cart-grid-right {
+  .cart-detailed-actions {
+    border-top: 1px solid $border-color-lighten;
+    padding: $box-padding 0;
+  }
+  .block-reassurance li .block-reassurance-item {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+.cart-summary {
+  padding-top: 0;
+  padding-bottom: 0;
+  position: relative;
+}
+.cart-summary-line {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  label, small {
+    margin-bottom: 0;
+  }
+}
+.cart-summary-totals {
+  .cart-total {
+  }
+}
+.cart-summary-subtotals {
+  label {
+    font-weight: 400;
+  }
+  .price {
+    font-size: 0.9rem;
+    font-weight: 400;
+  }
+}
+
+
+.promo-wrapper {
+  label {
+    margin-bottom: 0;
+  }
+}
+.promo-code {
+  .input-group {
+    padding: 5px 0;
+  }
+  .alert-danger {
+    padding: 0.5rem;
+    display: none;
+    .material-icons {
+      margin-top: -2px;
+    }
+  }
+}
+.promo-input {
+}
+.promo-name {
+  margin-bottom: 7px;
+  .remove-voucher i {
+    font-size: 1rem;
+    width: 20px;
+    text-align: center;
+  }
+}
+.promo-highlighted {
+  margin-top: 8px;
+  margin-bottom: 3px;
+}
+.promo-discounts {
+  margin-bottom: 0;
+  padding: 0 3%;
+  li {
+    padding: 0;
+  }
+  .code {
+    text-decoration: underline;
+    cursor: pointer;
+  }
+}
+
+/*** Responsive part ***/
+@include media-breakpoint-down(sm) {
+  .product-line-grid-left, .product-line-grid-body {
+    margin-bottom: 0.5rem;
+  }
+}

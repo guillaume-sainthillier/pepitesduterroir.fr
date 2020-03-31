@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2019 PrestaShop and Contributors
+ * 2007-2020 PrestaShop and Contributors
  *
  * NOTICE OF LICENSE
  *
@@ -13,7 +13,7 @@
  * to license@prestashop.com so we can send you a copy immediately.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2019 PrestaShop SA and Contributors
+ * @copyright 2007-2020 PrestaShop SA and Contributors
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License 3.0 (AFL-3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -39,10 +39,22 @@ class FirebaseModule implements PresenterInterface
 
         $firebaseModule = [
             'firebase' => [
-                'email' => \Configuration::get('PS_PSX_FIREBASE_EMAIL'),
+                'email' => \Configuration::get(
+                    'PS_PSX_FIREBASE_EMAIL',
+                    null,
+                    null,
+                    (int) \Context::getContext()->shop->id),
                 'idToken' => $idToken,
-                'localId' => \Configuration::get('PS_PSX_FIREBASE_LOCAL_ID'),
-                'refreshToken' => \Configuration::get('PS_PSX_FIREBASE_REFRESH_TOKEN'),
+                'localId' => \Configuration::get(
+                    'PS_PSX_FIREBASE_LOCAL_ID',
+                    null,
+                    null,
+                    (int) \Context::getContext()->shop->id),
+                'refreshToken' => \Configuration::get(
+                    'PS_PSX_FIREBASE_REFRESH_TOKEN',
+                    null,
+                    null,
+                    (int) \Context::getContext()->shop->id),
                 'onboardingCompleted' => !empty($idToken),
             ],
         ];

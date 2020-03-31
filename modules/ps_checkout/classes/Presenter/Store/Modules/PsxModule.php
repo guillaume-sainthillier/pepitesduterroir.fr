@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2019 PrestaShop and Contributors
+ * 2007-2020 PrestaShop and Contributors
  *
  * NOTICE OF LICENSE
  *
@@ -13,7 +13,7 @@
  * to license@prestashop.com so we can send you a copy immediately.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2019 PrestaShop SA and Contributors
+ * @copyright 2007-2020 PrestaShop SA and Contributors
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License 3.0 (AFL-3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -21,6 +21,7 @@
 namespace PrestaShop\Module\PrestashopCheckout\Presenter\Store\Modules;
 
 use PrestaShop\Module\PrestashopCheckout\Presenter\PresenterInterface;
+use PrestaShop\Module\PrestashopCheckout\PsCheckoutException;
 use PrestaShop\Module\PrestashopCheckout\Repository\PsAccountRepository;
 
 /**
@@ -28,7 +29,7 @@ use PrestaShop\Module\PrestashopCheckout\Repository\PsAccountRepository;
  */
 class PsxModule implements PresenterInterface
 {
-    const ALL_LANGUAGES_FILE = _PS_ROOT_DIR_ . '/app/Resources/all_languages.json';
+    const ALL_LANGUAGES_FILE = _PS_MODULE_DIR_ . 'ps_checkout/views/json/all_languages.json';
     const ALL_COUNTRIES_FILE = _PS_MODULE_DIR_ . 'ps_checkout/views/json/all_countries.json';
     const ALL_COUNTRIES_STATES_FILE = _PS_MODULE_DIR_ . 'ps_checkout/views/json/countries_states.json';
     const ALL_BUSINESS_FILE = _PS_MODULE_DIR_ . 'ps_checkout/views/json/i18n/business-information-';
@@ -53,7 +54,15 @@ class PsxModule implements PresenterInterface
         return [
             'psx' => [
                 'onboardingCompleted' => (new PsAccountRepository())->psxFormIsCompleted(),
-                'psxFormData' => json_decode(\Configuration::get('PS_CHECKOUT_PSX_FORM'), true),
+                'psxFormData' => json_decode(
+                    \Configuration::get(
+                        'PS_CHECKOUT_PSX_FORM',
+                        null,
+                        null,
+                        (int) \Context::getContext()->shop->id
+                    ),
+                    true
+                ),
                 'languagesDetails' => $this->getJsonData(self::ALL_LANGUAGES_FILE),
                 'countriesDetails' => $this->getJsonData(self::ALL_COUNTRIES_FILE),
                 'countriesStatesDetails' => $this->getJsonData(self::ALL_COUNTRIES_STATES_FILE),
@@ -77,7 +86,7 @@ class PsxModule implements PresenterInterface
         );
 
         if (JSON_ERROR_NONE !== json_last_error()) {
-            throw new \Exception(sprintf('The legacy to standard locales JSON could not be decoded %s', json_last_error_msg()));
+            throw new PsCheckoutException(sprintf('The legacy to standard locales JSON could not be decoded %s', json_last_error_msg()));
         }
 
         return $data;

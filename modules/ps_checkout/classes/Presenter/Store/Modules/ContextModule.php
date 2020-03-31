@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2019 PrestaShop and Contributors
+ * 2007-2020 PrestaShop and Contributors
  *
  * NOTICE OF LICENSE
  *
@@ -13,16 +13,18 @@
  * to license@prestashop.com so we can send you a copy immediately.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2019 PrestaShop SA and Contributors
+ * @copyright 2007-2020 PrestaShop SA and Contributors
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License 3.0 (AFL-3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
 
 namespace PrestaShop\Module\PrestashopCheckout\Presenter\Store\Modules;
 
+use PrestaShop\Module\PrestashopCheckout\Adapter\LinkAdapter;
 use PrestaShop\Module\PrestashopCheckout\Faq\Faq;
 use PrestaShop\Module\PrestashopCheckout\Presenter\PresenterInterface;
 use PrestaShop\Module\PrestashopCheckout\ShopContext;
+use PrestaShop\Module\PrestashopCheckout\ShopUuidManager;
 use PrestaShop\Module\PrestashopCheckout\Translations\Translations;
 
 /**
@@ -57,12 +59,16 @@ class ContextModule implements PresenterInterface
             'context' => [
                 'moduleVersion' => \Ps_checkout::VERSION,
                 'psVersion' => _PS_VERSION_,
+                'phpVersion' => phpversion(),
+                'shopIs17' => (new ShopContext())->isShop17(),
                 'moduleKey' => $this->module->module_key,
-                'shopId' => \Configuration::get('PS_CHECKOUT_SHOP_UUID_V4'),
+                'shopId' => (new ShopUuidManager())->getForShop((int) \Context::getContext()->shop->id),
                 'isReady' => (new ShopContext())->isReady(),
+                'isShopContext' => $this->isShopContext(),
+                'shopsTree' => $this->getShopsTree(),
                 'faq' => $this->getFaq(),
                 'language' => $this->context->language,
-                'prestashopCheckoutAjax' => $this->context->link->getAdminLink('AdminAjaxPrestashopCheckout'),
+                'prestashopCheckoutAjax' => (new LinkAdapter($this->context->link))->getAdminLink('AdminAjaxPrestashopCheckout'),
                 'translations' => (new Translations($this->module))->getTranslations(),
                 'readmeUrl' => $this->getReadme(),
                 'cguUrl' => $this->getCgu(),
@@ -71,6 +77,60 @@ class ContextModule implements PresenterInterface
         ];
 
         return $contextModule;
+    }
+
+    /**
+     * @return bool
+     */
+    private function isShopContext()
+    {
+        if (\Shop::isFeatureActive() && \Shop::getContext() !== \Shop::CONTEXT_SHOP) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @return array
+     */
+    private function getShopsTree()
+    {
+        $shopList = [];
+
+        if (true === $this->isShopContext()) {
+            return $shopList;
+        }
+
+        $linkAdapter = new LinkAdapter($this->context->link);
+
+        foreach (\Shop::getTree() as $groupId => $groupData) {
+            $shops = [];
+
+            foreach ($groupData['shops'] as $shopId => $shopData) {
+                $shops[] = [
+                    'id' => $shopId,
+                    'name' => $shopData['name'],
+                    'url' => $linkAdapter->getAdminLink(
+                        'AdminModules',
+                        true,
+                        [],
+                        [
+                            'configure' => $this->module->name,
+                            'setShopContext' => 's-' . $shopId,
+                        ]
+                    ),
+                ];
+            }
+
+            $shopList[] = [
+                'id' => $groupId,
+                'name' => $groupData['name'],
+                'shops' => $shops,
+            ];
+        }
+
+        return $shopList;
     }
 
     /**
@@ -149,7 +209,15 @@ class ContextModule implements PresenterInterface
      */
     private function roundingSettingsIsCorrect()
     {
-        return \Configuration::get('PS_ROUND_TYPE') === '1'
-            && \Configuration::get('PS_PRICE_ROUND_MODE') === '2';
+        return \Configuration::get(
+                'PS_ROUND_TYPE',
+                null,
+                null,
+                (int) \Context::getContext()->shop->id) === '1'
+            && \Configuration::get(
+                'PS_PRICE_ROUND_MODE',
+                null,
+                null,
+                (int) \Context::getContext()->shop->id) === '2';
     }
 }

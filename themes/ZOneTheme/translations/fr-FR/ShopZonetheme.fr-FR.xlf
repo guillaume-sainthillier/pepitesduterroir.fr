@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" version="1.2">
+  <file original="/Applications/XAMPP/xamppfiles/htdocs/zone/web/backoffice" source-language="fr-FR" target-language="fr-FR" datatype="plaintext">
+    <body>
+      <trans-unit id="6e9783376d951cfd780e9fdb67a0f02c">
+        <source>View details</source>
+        <target>Voir les détails</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="4351cfebe4b61d8aa5efa1d020710005">
+        <source>View</source>
+        <target>Vue</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="831a28f1e8df07c553fcd59546465d13">
+        <source>Buy</source>
+        <target>Acheter</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="f73cc399b5ce12735a57f03414f09ef9">
+        <source>Subcategories</source>
+        <target>Sous-catégories</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="51c45b795d5d18a3e4e0c37e8b20a141">
+        <source>Table</source>
+        <target>Table</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="5174d1309f275ba6f275db3af9eb3e18">
+        <source>Grid</source>
+        <target>Grille</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="b61541208db7fa7dba42c85224405911">
+        <source>Menu</source>
+        <target>Menu</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="4ee29ca12c7d126654bd0e5275de6135">
+        <source>List</source>
+        <target>Liste</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="dd6943d5e59c8fedde4adb05e0a124f6">
+        <source>Popular Brands</source>
+        <target>Marques Populaires</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="96b4cf26fa238554ffbc7cefc17a5250">
+        <source>Featured Categories</source>
+        <target>Catégories Représentées</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="0a18f0aa51f30f1107495bf639caf16c">
+        <source>Shop Now</source>
+        <target>Achetez Maintenant</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="925dc7757bc7a9926f13546bb8260267">
+        <source>Show More</source>
+        <target>Afficher plus</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="e202ca64fbdafd978aadd3d2e9db7aad">
+        <source>Do not show this popup again.</source>
+        <target>Ne plus montrer ce popup.</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="a82be0f551b8708bc08eb33cd9ded0cf">
+        <source>Information</source>
+        <target>Informations</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="e58c27818bf68b1f92513ad4f99972c4">
+        <source>Back to Top</source>
+        <target>Retour en Haut</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="c4408d335012a56ff58937d78050efad">
+        <source>Accept</source>
+        <target>Acceptez</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="3ec365dd533ddb7ef3d1c111186ce872">
+        <source>Details</source>
+        <target>Détails</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="f345838ec9ca8e62bffa777d31761bcd">
+        <source>Special offer ends in</source>
+        <target>Cette promotion se termine dans</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="628b7db04235f228d40adc671413a8c8">
+        <source>day</source>
+        <target>jour</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="44fdec47036f482b68b748f9d786801b">
+        <source>days</source>
+        <target>jours</target>
+        <note>Line: </note>
+      </trans-unit>
+      <trans-unit id="47ae95238e4c515d3a82bdfbb09461ce">
+        <source>This offer has expired!</source>
+        <target>Cette offre a expiré!</target>
+        <note>Line: </note>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>

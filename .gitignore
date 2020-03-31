@@ -16,7 +16,11 @@
 !var/logs/.gitkeep
 !/var/sessions
 /var/sessions/*
+
+themes/*/_dev/node_modules
 !var/sessions/.gitkeep
+
+/vendor/
 
 admin*/autoupgrade/
 /cache/*

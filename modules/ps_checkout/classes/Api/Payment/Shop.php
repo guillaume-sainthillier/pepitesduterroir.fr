@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2019 PrestaShop and Contributors
+ * 2007-2020 PrestaShop and Contributors
  *
  * NOTICE OF LICENSE
  *
@@ -13,7 +13,7 @@
  * to license@prestashop.com so we can send you a copy immediately.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2019 PrestaShop SA and Contributors
+ * @copyright 2007-2020 PrestaShop SA and Contributors
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License 3.0 (AFL-3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -41,6 +41,47 @@ class Shop extends PaymentClient
         return $this->post([
             'json' => json_encode([
                 'merchant_id' => $merchantId,
+            ]),
+        ]);
+    }
+
+    /**
+     * Used to notify PSL on settings update
+     *
+     * @return array
+     */
+    public function updateSettings()
+    {
+        $this->setRoute('/payments/shop/update_settings');
+
+        return $this->post([
+            'json' => json_encode([
+                'settings' => [
+                    'cb' => (bool) \Configuration::get(
+                        'PS_CHECKOUT_CARD_PAYMENT_ENABLED',
+                        null,
+                        null,
+                        (int) \Context::getContext()->shop->id
+                    ),
+                    'express_in_product' => (bool) \Configuration::get(
+                        'PS_CHECKOUT_EC_PRODUCT_PAGE',
+                        null,
+                        null,
+                        (int) \Context::getContext()->shop->id
+                    ),
+                    'express_in_cart' => (bool) \Configuration::get(
+                        'PS_CHECKOUT_EC_ORDER_PAGE',
+                        null,
+                        null,
+                        (int) \Context::getContext()->shop->id
+                    ),
+                    'express_in_checkout' => (bool) \Configuration::get(
+                        'PS_CHECKOUT_EC_CHECKOUT_PAGE',
+                        null,
+                        null,
+                        (int) \Context::getContext()->shop->id
+                    ),
+                ],
             ]),
         ]);
     }

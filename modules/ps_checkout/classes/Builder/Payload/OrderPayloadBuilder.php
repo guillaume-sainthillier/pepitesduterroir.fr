@@ -1,32 +1,27 @@
 <?php
 /**
-* 2007-2019 PrestaShop
-*
-* NOTICE OF LICENSE
-*
-* This source file is subject to the Academic Free License (AFL 3.0)
-* that is bundled with this package in the file LICENSE.txt.
-* It is also available through the world-wide-web at this URL:
-* http://opensource.org/licenses/afl-3.0.php
-* If you did not receive a copy of the license and are unable to
-* obtain it through the world-wide-web, please send an email
-* to license@prestashop.com so we can send you a copy immediately.
-*
-* DISCLAIMER
-*
-* Do not edit or add to this file if you wish to upgrade PrestaShop to newer
-* versions in the future. If you wish to customize PrestaShop for your
-* needs please refer to http://www.prestashop.com for more information.
-*
-*  @author    PrestaShop SA <contact@prestashop.com>
-*  @copyright 2007-2019 PrestaShop SA
-*  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
-*  International Registered Trademark & Property of PrestaShop SA
-*/
+ * 2007-2020 PrestaShop and Contributors
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Academic Free License 3.0 (AFL-3.0)
+ * that is bundled with this package in the file LICENSE.txt.
+ * It is also available through the world-wide-web at this URL:
+ * https://opensource.org/licenses/AFL-3.0
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to license@prestashop.com so we can send you a copy immediately.
+ *
+ * @author    PrestaShop SA <contact@prestashop.com>
+ * @copyright 2007-2020 PrestaShop SA and Contributors
+ * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License 3.0 (AFL-3.0)
+ * International Registered Trademark & Property of PrestaShop SA
+ */
 
 namespace PrestaShop\Module\PrestashopCheckout\Builder\Payload;
 
 use PrestaShop\Module\PrestashopCheckout\PaypalCountryCodeMatrice;
+use PrestaShop\Module\PrestashopCheckout\PsCheckoutException;
 use PrestaShop\Module\PrestashopCheckout\Repository\PaypalAccountRepository;
 
 /**
@@ -122,12 +117,30 @@ class OrderPayloadBuilder extends Builder implements PayloadBuilderInterface
      */
     public function buildBaseNode()
     {
+        $shopName = \Configuration::get(
+            'PS_SHOP_NAME',
+            null,
+            null,
+            (int) \Context::getContext()->shop->id
+        );
+
         $node = [
-            'intent' => \Configuration::get('PS_CHECKOUT_INTENT'), // capture or authorize
+            'intent' => \Configuration::get(
+                'PS_CHECKOUT_INTENT',
+                null,
+                null,
+                (int) \Context::getContext()->shop->id
+            ), // capture or authorize
             'custom_id' => (string) $this->cart['cart']['id'], // id_cart or id_order // link between paypal order and prestashop order
             'invoice_id' => '',
-            'description' => $this->truncate('Checking out with your cart from ' . \Configuration::get('PS_SHOP_NAME'), 127),
-            'soft_descriptor' => $this->truncate(\Configuration::get('PS_SHOP_NAME'), 22),
+            'description' => $this->truncate(
+                'Checking out with your cart from ' . $shopName,
+                127
+            ),
+            'soft_descriptor' => $this->truncate(
+                $shopName,
+                22
+            ),
             'amount' => [
                 'currency_code' => $this->cart['currency']['iso_code'],
                 'value' => $this->cart['cart']['totals']['total_including_tax']['amount'],
@@ -140,7 +153,21 @@ class OrderPayloadBuilder extends Builder implements PayloadBuilderInterface
         if (true === $this->isUpdate) {
             $node['id'] = $this->paypalOrderId;
         } else {
-            $node['roundingConfig'] = (string) \Configuration::get('PS_ROUND_TYPE') . '-' . (string) \Configuration::get('PS_PRICE_ROUND_MODE');
+            $roundType = (string) \Configuration::get(
+                'PS_ROUND_TYPE',
+                null,
+                null,
+                (int) \Context::getContext()->shop->id
+            );
+
+            $roundMode = (string) \Configuration::get(
+                'PS_PRICE_ROUND_MODE',
+                null,
+                null,
+                (int) \Context::getContext()->shop->id
+            );
+
+            $node['roundingConfig'] = $roundType . '-' . $roundMode;
         }
 
         // TODO: Disabled temporary: Need to handle country indicator
@@ -174,7 +201,7 @@ class OrderPayloadBuilder extends Builder implements PayloadBuilderInterface
             ],
             'address' => [
                 'address_line_1' => $this->cart['addresses']['shipping']->address1,
-                'address_line_2' => $this->cart['addresses']['shipping']->address2,
+                'address_line_2' => (string) $this->cart['addresses']['shipping']->address2,
                 'admin_area_1' => (string) $this->getStateNameById($this->cart['addresses']['shipping']->id_state),
                 'admin_area_2' => $this->cart['addresses']['shipping']->city,
                 'country_code' => $countryCodeMatrice->getPaypalIsoCode($shippingCountryIsoCode),
@@ -201,7 +228,7 @@ class OrderPayloadBuilder extends Builder implements PayloadBuilderInterface
             'email_address' => $this->cart['customer']->email,
             'address' => [
                 'address_line_1' => $this->cart['addresses']['invoice']->address1,
-                'address_line_2' => $this->cart['addresses']['invoice']->address2,
+                'address_line_2' => (string) $this->cart['addresses']['invoice']->address2,
                 'admin_area_1' => (string) $this->getStateNameById($this->cart['addresses']['invoice']->id_state), //The highest level sub-division in a country, which is usually a province, state, or ISO-3166-2 subdivision.
                 'admin_area_2' => $this->cart['addresses']['invoice']->city, // A city, town, or village. Smaller than admin_area_level_1
                 'country_code' => $countryCodeMatrice->getPaypalIsoCode($payerCountryIsoCode),
@@ -227,7 +254,12 @@ class OrderPayloadBuilder extends Builder implements PayloadBuilderInterface
     public function buildApplicationContextNode()
     {
         $node['application_context'] = [
-            'brand_name' => \Configuration::get('PS_SHOP_NAME'),
+            'brand_name' => \Configuration::get(
+                'PS_SHOP_NAME',
+                null,
+                null,
+                (int) \Context::getContext()->shop->id
+            ),
             'shipping_preference' => $this->expressCheckout ? 'GET_FROM_FILE' : 'SET_PROVIDED_ADDRESS',
         ];
 
@@ -418,7 +450,7 @@ class OrderPayloadBuilder extends Builder implements PayloadBuilderInterface
     private function checkPaypalOrderIdWhenUpdate()
     {
         if (true === $this->isUpdate && empty($this->paypalOrderId)) {
-            throw new \PrestaShopException('PayPal order ID is required when building payload for update an order');
+            throw new PsCheckoutException('PayPal order ID is required when building payload for update an order');
         }
     }
 

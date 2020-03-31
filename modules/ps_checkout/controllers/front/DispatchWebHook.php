@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2019 PrestaShop and Contributors
+ * 2007-2020 PrestaShop and Contributors
  *
  * NOTICE OF LICENSE
  *
@@ -13,7 +13,7 @@
  * to license@prestashop.com so we can send you a copy immediately.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2019 PrestaShop SA and Contributors
+ * @copyright 2007-2020 PrestaShop SA and Contributors
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License 3.0 (AFL-3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -21,15 +21,13 @@ use PrestaShop\Module\PrestashopCheckout\Api\Payment\Webhook;
 use PrestaShop\Module\PrestashopCheckout\MerchantDispatcher;
 use PrestaShop\Module\PrestashopCheckout\OrderDispatcher;
 use PrestaShop\Module\PrestashopCheckout\PsCheckoutException;
+use PrestaShop\Module\PrestashopCheckout\ShopUuidManager;
 use PrestaShop\Module\PrestashopCheckout\UnauthorizedException;
 use PrestaShop\Module\PrestashopCheckout\WebHookNock;
 use PrestaShop\Module\PrestashopCheckout\WebHookValidation;
 
 class ps_checkoutDispatchWebHookModuleFrontController extends ModuleFrontController
 {
-    const PSESSENTIALS_DEV_URL = 'out.psessentials-integration.net';
-    const PSESSENTIALS_PROD_URL = 'out.psessentials.net';
-    const PS_CHECKOUT_SHOP_UID_LABEL = 'PS_CHECKOUT_SHOP_UUID_V4';
     const PS_CHECKOUT_PAYPAL_ID_LABEL = 'PS_CHECKOUT_PAYPAL_ID_MERCHANT';
 
     /**
@@ -68,7 +66,7 @@ class ps_checkoutDispatchWebHookModuleFrontController extends ModuleFrontControl
     public function display()
     {
         try {
-            $headerValues = getallheaders();
+            $headerValues = $this->getHeaderValues();
             $validationValues = new WebHookValidation();
             $errors = $validationValues->validateHeaderDatas($headerValues);
 
@@ -79,7 +77,18 @@ class ps_checkoutDispatchWebHookModuleFrontController extends ModuleFrontControl
 
             $this->setAtributesHeaderValues($headerValues);
 
-            $bodyValues = \Tools::jsonDecode(file_get_contents('php://input'), true);
+            $bodyContent = file_get_contents('php://input');
+
+            if (empty($bodyContent)) {
+                throw new UnauthorizedException(WebHookValidation::BODY_DATA_ERROR);
+            }
+
+            $bodyValues = \Tools::jsonDecode($bodyContent, true);
+
+            if (empty($bodyValues)) {
+                throw new UnauthorizedException(WebHookValidation::BODY_DATA_ERROR);
+            }
+
             $errors = $validationValues->validateBodyDatas($bodyValues);
 
             // If there is errors, return them
@@ -127,6 +136,25 @@ class ps_checkoutDispatchWebHookModuleFrontController extends ModuleFrontControl
     }
 
     /**
+     * Get HTTP Headers
+     *
+     * @return array
+     */
+    private function getHeaderValues()
+    {
+        // Not available on nginx
+        if (function_exists('getallheaders')) {
+            return getallheaders();
+        }
+
+        return [
+            'Shop-Id' => isset($_SERVER['HTTP_SHOP_ID']) ? $_SERVER['HTTP_SHOP_ID'] : null,
+            'Merchant-Id' => isset($_SERVER['HTTP_MERCHANT_ID']) ? $_SERVER['HTTP_MERCHANT_ID'] : null,
+            'Psx-Id' => isset($_SERVER['HTTP_PSX_ID']) ? $_SERVER['HTTP_PSX_ID'] : null,
+        ];
+    }
+
+    /**
      * Set Header Attributes values from the HTTP request
      *
      * @param array $headerValues
@@ -164,8 +192,13 @@ class ps_checkoutDispatchWebHookModuleFrontController extends ModuleFrontControl
         /*
         *   @TODO : Get payload hash to confirm that it's not modified
         */
-        $localShopId = \Configuration::get(self::PS_CHECKOUT_SHOP_UID_LABEL);
-        $localMerchantId = \Configuration::get(self::PS_CHECKOUT_PAYPAL_ID_LABEL);
+        $localShopId = (new ShopUuidManager())->getForShop((int) \Context::getContext()->shop->id);
+        $localMerchantId = \Configuration::get(
+            self::PS_CHECKOUT_PAYPAL_ID_LABEL,
+            null,
+            null,
+            (int) \Context::getContext()->shop->id
+        );
 
         if ($this->shopId !== $localShopId) {
             throw new UnauthorizedException('shopId wrong');

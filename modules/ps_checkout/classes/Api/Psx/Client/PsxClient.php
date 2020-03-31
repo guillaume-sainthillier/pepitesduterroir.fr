@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2019 PrestaShop and Contributors
+ * 2007-2020 PrestaShop and Contributors
  *
  * NOTICE OF LICENSE
  *
@@ -13,7 +13,7 @@
  * to license@prestashop.com so we can send you a copy immediately.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2019 PrestaShop SA and Contributors
+ * @copyright 2007-2020 PrestaShop SA and Contributors
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License 3.0 (AFL-3.0)
  * International Registered Trademark & Property of PrestaShop SA
  */
@@ -24,6 +24,7 @@ use GuzzleHttp\Client;
 use PrestaShop\Module\PrestashopCheckout\Api\Firebase\Token;
 use PrestaShop\Module\PrestashopCheckout\Api\GenericClient;
 use PrestaShop\Module\PrestashopCheckout\Environment\PsxEnv;
+use PrestaShop\Module\PrestashopCheckout\ShopUuidManager;
 
 class PsxClient extends GenericClient
 {
@@ -38,7 +39,7 @@ class PsxClient extends GenericClient
                     'Content-Type' => 'application/vnd.psx.v1+json', // api version to use (psl side)
                     'Accept' => 'application/json',
                     'Authorization' => 'Bearer ' . (new Token())->getToken(),
-                    'Shop-Id' => \Configuration::get('PS_CHECKOUT_SHOP_UUID_V4'),
+                    'Shop-Id' => (new ShopUuidManager())->getForShop((int) \Context::getContext()->shop->id),
                     'Module-Version' => \Ps_checkout::VERSION, // version of the module
                     'Prestashop-Version' => _PS_VERSION_, // prestashop version
                 ],

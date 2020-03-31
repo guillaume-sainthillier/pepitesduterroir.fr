@@ -6,11 +6,15 @@ $vendorDir = dirname(dirname(__FILE__));
 $baseDir = dirname($vendorDir);
 
 return array(
+    'org\\bovigo\\vfs\\' => array($vendorDir . '/mikey179/vfsStream/src/main/php'),
     'Twig_' => array($vendorDir . '/twig/twig/lib'),
     'SecurityLib' => array($vendorDir . '/ircmaxell/security-lib/lib'),
     'RandomLib' => array($vendorDir . '/ircmaxell/random-lib/lib'),
+    'Prophecy\\' => array($vendorDir . '/phpspec/prophecy/src'),
+    'Phake' => array($vendorDir . '/phake/phake/src'),
     'PHPSQLParser\\' => array($vendorDir . '/greenlion/php-sql-parser/src'),
     'PEAR' => array($vendorDir . '/pear/pear_exception'),
+    'JohnKary' => array($vendorDir . '/johnkary/phpunit-speedtrap/src'),
     'HTMLPurifier' => array($vendorDir . '/ezyang/htmlpurifier/library'),
     'Doctrine\\ORM\\' => array($vendorDir . '/doctrine/orm/lib'),
     'Doctrine\\DBAL\\' => array($vendorDir . '/doctrine/dbal/lib'),
@@ -21,6 +25,10 @@ return array(
     'Detection' => array($vendorDir . '/mobiledetect/mobiledetectlib/namespaced'),
     'Curl' => array($vendorDir . '/curl/curl/src'),
     'Console' => array($vendorDir . '/pear/console_getopt'),
+    'Behat\\Transliterator' => array($vendorDir . '/behat/transliterator/src'),
+    'Behat\\Testwork' => array($vendorDir . '/behat/behat/src'),
+    'Behat\\Gherkin' => array($vendorDir . '/behat/gherkin/src'),
+    'Behat\\Behat' => array($vendorDir . '/behat/behat/src'),
     'Archive_Tar' => array($vendorDir . '/pear/archive_tar'),
     'Analog' => array($vendorDir . '/analog/analog/lib'),
     '' => array($vendorDir . '/cssjanus/cssjanus/src', $vendorDir . '/pear/pear-core-minimal/src'),

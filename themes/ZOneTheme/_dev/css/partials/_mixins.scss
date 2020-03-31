@@ -1,0 +1,75 @@
+@mixin search-box {
+  form {
+    position: relative;
+    input[type=text] {
+      &:focus {
+        outline: 3px $primary solid;
+        color: $gray-800;
+        background: white;
+        + button .search {
+          color: $primary;
+        }
+      }
+      border: none;
+      padding: 10px;
+      min-width: 255px;
+      background: $gray-200;
+      color: $gray-600;
+      &::placeholder {
+        color: rgba($gray-600, 0.5);
+        text-indent: 10px;
+      }
+    }
+    button[type=submit] {
+      position: absolute;
+      background: none;
+      border: none;
+      bottom: 5px;
+      right: 2px;
+      color: $gray-800;
+      .search:hover {
+        color: $primary;
+      }
+    }
+  }
+}
+
+@mixin box-shadow {
+  box-shadow: 2px 2px 11px 0px rgba(0, 0, 0, 0.1);
+}
+
+@mixin title-letter-spacing($letterspacing: 0.02em) {
+  letter-spacing: $letterspacing;
+}
+
+@mixin my-button-variant($color, $background, $background-hover) {
+  color: $color;
+  background-color: $background;
+
+  &.disabled, &:disabled  {
+    color: $color;
+    background-color: $background;
+  }
+
+  &:hover {
+    color: $color;
+    background-color: $background-hover;
+  }
+  &:not(:disabled):not(.disabled):active,
+  &:not(:disabled):not(.disabled).active {
+    color: $color;
+    background-color: $background-hover;
+  }
+}
+
+@mixin make-title($font-size, $line-height: 30px) {
+  font-family: $title-font;
+  font-size: $font-size;
+  font-weight: 700;
+  color: $title-color;
+  line-height: $line-height;
+  @include title-letter-spacing;
+  text-transform: uppercase;
+  margin: 0 0 15px;
+  padding: 5px 0;
+}

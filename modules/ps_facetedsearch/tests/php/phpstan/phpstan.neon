@@ -1,8 +1,8 @@
 parameters:
   reportUnmatchedIgnoredErrors: false
-  bootstrap: /var/www/html/modules/ps_facetedsearch/tests/php/phpstan/bootstrap.php
+  bootstrap: /web/module/tests/php/phpstan/bootstrap.php
   paths:
-    - /var/www/html/modules/ps_facetedsearch/src
+    - /web/module/src
   ignoreErrors:
     # module specific
     - '~Constant _THEME_COL_DIR_ not found.~'
@@ -11,7 +11,5 @@ parameters:
     - '~Parameter #1 \$master of static method DbCore::getInstance\(\) expects bool, int given\.~'
     - '~Parameter #1 \$string of method PrestaShop\\PrestaShop\\Core\\Product\\Search\\URLFragmentSerializer::unserialize\(\) expects string, array given\.~'
     - '~Parameter #\d+ \$(.+?) of class Category constructor expects null, int given\.~'
-    - '~constant NUMBERING_SYSTEM_LATIN on an unknown class~'
-    - '~PrestaShopBundle\\Form\\Admin\\Type\\(TranslatableType|SwitchType) not found~'
 
   level: 5

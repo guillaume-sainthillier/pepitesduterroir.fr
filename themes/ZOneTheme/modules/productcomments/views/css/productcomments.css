@@ -1,0 +1,419 @@
+/**
+ * 2007-2019 PrestaShop SA and Contributors
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Academic Free License (AFL 3.0)
+ * that is bundled with this package in the file LICENSE.txt.
+ * It is also available through the world-wide-web at this URL:
+ * http://opensource.org/licenses/afl-3.0.php
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to license@prestashop.com so we can send you a copy immediately.
+ *
+ * DISCLAIMER
+ *
+ * Do not edit or add to this file if you wish to upgrade PrestaShop to newer
+ * versions in the future. If you wish to customize PrestaShop for your
+ * needs please refer to http://www.prestashop.com for more information.
+ *
+ * @author    PrestaShop SA <contact@prestashop.com>
+ * @copyright 2007-2019 PrestaShop SA and Contributors
+ * @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
+ * International Registered Trademark & Property of PrestaShop SA
+ */
+
+/**
+ *  Product comments CSS
+ */
+
+.btn-comment,
+.btn-comment-inverse {
+  padding-left: 10px;
+  padding-right: 10px;
+  text-transform: none;
+}
+.btn-comment .material-icons,
+.btn-comment-inverse i {
+  width: 20px;
+  text-align: center;
+  margin-top: -3px;
+  margin-left: -5px;
+}
+.btn-comment-big {
+  padding: 13px 16px;
+  height: 45px;
+}
+
+.btn-comment-huge {
+  padding: 13px 28px;
+  height: 45px;
+}
+
+/**
+ * Additional product infos
+ */
+
+.product-comments-additional-info {
+  margin: 20px 0;
+}
+.product-comments-additional-info-has-comments {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: space-around;
+  align-items: center;
+  padding: 12px 5px;
+  background: #f7f7f7;
+}
+
+.product-comments-additional-info .link-comment {
+  display: block;
+}
+
+.product-comments-additional-info .link-comment:hover, .product-comments-additional-info .link-comment:active {
+  text-decoration: underline;
+}
+.product-comments-additional-info .link-comment.post-product-comment {
+}
+
+.product-comments-additional-info .comments-note {
+  text-align: center;
+  padding-bottom: 3px;
+}
+
+/**
+ *  Star component
+ */
+
+.grade-stars {
+  position: relative;
+  height: 20px;
+  width: 100px;
+}
+.grade-stars .star-content {
+  position: absolute;
+  top: 0;
+  left: 1px;
+  overflow: hidden;
+}
+
+.star-content {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+}
+.star-content i {
+  display: block;
+  font-size: 20px;
+}
+.star-content .material-icons.star_border:before {
+  content: '\e83a';
+}
+.star-content .material-icons.star:before {
+  content: '\e838';
+}
+.star-content div.star,
+.star-content div.star-on,
+.star-content div.star-hover {
+  display: block;
+  flex: auto;
+  width: 20px;
+  height: 20px;
+}
+.star-content div.star-on i {
+  font-size: 22px;
+  margin-left: -1px;
+  margin-top: -1px;
+}
+.star-content div.star {
+  color: #777777;
+}
+.star-content div.star-on,
+.star-content div.star-hover {
+  color: #f88e4f;
+}
+.star-content div.star-hover {
+  cursor: pointer;
+}
+
+.grade-stars.small-stars {
+  height: 14px;
+  width: 70px;
+}
+.small-stars .star-content div.star,
+.small-stars .star-content div.star-on,
+.small-stars .star-content div.star-hover {
+  width: 14px;
+  height: 14px;
+}
+.small-stars  .star-content i {
+  font-size: 13px;
+}
+.small-stars .star-content div.star-on i {
+  font-size: 15px;
+}
+
+/**
+ *  Post comment modal
+ */
+.product-comment-modal .modal-header {
+}
+
+.product-comment-modal .modal-dialog {
+  width: calc(100% - 30px);
+  max-width: 774px;
+}
+
+.product-comment-modal .modal-dialog .product-flag {
+  display: none;
+}
+
+.product-comment-modal .modal-dialog .product-cover,
+.product-comment-modal .modal-dialog .product-cover img {
+  width: 99px;
+  height: 99px;
+}
+
+
+
+#product-comment-posted-modal .post-comment-buttons,
+#product-comment-post-error .post-comment-buttons,
+#update-comment-usefulness-post-error .post-comment-buttons {
+  margin-top: 30px;
+}
+
+#post-product-comment-modal .star-content div.star a {
+  display: block;
+  position: absolute;
+  text-indent: -5000px;
+}
+
+#post-product-comment-modal .product-preview {
+  max-width: 510px;
+  margin-left: auto;
+  margin-right: auto;
+}
+#post-product-comment-modal .product-preview .product-image,
+#post-product-comment-modal .product-preview .product-name {
+  padding-left: 5px;
+  padding-right: 5px;
+  overflow: hidden;
+}
+#post-product-comment-modal .product-preview .product-image {
+  max-width: 60px;
+}
+
+#post-product-comment-modal #criterions_list {
+  margin-bottom: 1.25rem;
+  margin-left: -15px;
+  margin-right: -15px;
+  background: #f7f7f7;
+  padding: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+#post-product-comment-modal .criterion-rating {
+  width: 50%;
+  text-align: center;
+}
+#post-product-comment-modal .criterion-rating label {
+}
+#post-product-comment-modal .criterion-rating .grade-stars {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+#post-product-comment-modal .required {
+  padding: 0 3px;
+}
+#post-product-comment-modal .post-comment-buttons .small {
+  float: right;
+}
+
+#post-product-comment-form input.error,
+#post-product-comment-form textarea.error {
+  background-color: #f8d7da;
+  border-color: #f5c6cb;
+}
+
+#post-product-comment-form input.valid,
+#post-product-comment-form textarea.valid {
+  border-color: #c3e6cb;
+}
+
+/**
+ *  Product comments list
+ */
+
+#product-comments-list-header {
+}
+.product-comments-summary {
+  display: flex;
+  justify-content: space-around;
+  max-width: 600px;
+  margin: auto;
+}
+.product-comments-summary .comments-note {
+  display: flex;
+  align-items: center;
+}
+.product-comments-summary .comments-note label {
+  margin: 0 10px;
+}
+
+#product-comments-list-header .comments-nb {
+}
+
+#product-comments-list-header .comments-nb  .material-icons {
+  margin-right: 3px;
+}
+
+#product-comments-list .btn-comment {
+}
+
+.js-parent-comments-list {
+  display: none;
+}
+
+#product-comments-list {}
+.product-comment-list-item {
+  display: flex;
+  padding: .9375rem 0;
+}
+.product-comment-list-item + .product-comment-list-item {
+  border-top: 1px solid #ededed;
+}
+
+#empty-product-comment .btn-comment {
+}
+
+.product-comment-list-item .grade-stars .star-content {
+  margin: 0 0 10px;
+}
+
+.product-comment-list-item .comment-infos {
+  min-width: 120px;
+  flex: none;
+}
+.product-comment-list-item .comment-content {
+  flex: 1;
+}
+
+.product-comment-list-item .comment-infos .grade-stars {
+  margin-bottom: 10px;
+}
+
+.product-comment-list-item .comment-content h4 {
+}
+
+.product-comment-list-item .comment-content p {
+}
+
+.product-comment-list-item .comment-content .comment-buttons {
+  display: flex;
+  justify-content: flex-end;
+}
+.product-comment-list-item .comment-content .comment-buttons a {
+  margin: 0 4px;
+}
+
+.product-comment-list-item .comment-content .comment-buttons a i {
+  font-size: 120%;
+}
+.product-comment-list-item .comment-content .comment-buttons a span {
+  font-size: 90%;
+}
+
+/*
+** Quickview style
+*/
+
+.product-quickview-review {
+  display: flex;
+  flex-direction: row;
+}
+
+.product-quickview-review .grade-stars .star-content {
+  margin: 0 0 0 0;
+  top: 0;
+}
+
+/*
+** Product list override
+*/
+.product-list-reviews {
+  display: flex;
+  margin: 5px -2px 0;
+  align-items: center;
+}
+.js-product-comment {
+  display: none;
+  overflow: hidden;
+}
+.product-list-reviews .comments-nb {
+  margin: 0 3px;
+  font-size: 90%;
+  display: none;
+}
+.product-list .list .product-miniature .product-list-reviews {
+  margin-bottom: 6px;
+  margin-top: -3px;
+}
+.product-list .list .product-miniature .product-list-reviews .comments-nb {
+  display: block;
+}
+.product-list .table-view .product-miniature .product-list-reviews {
+  justify-content: center;
+}
+.product-small-style .product-list .grid .product-miniature .product-list-reviews {
+  justify-content: center;
+}
+@media (max-width: 767.98px) {
+  .product-list .grid .product-miniature .product-list-reviews {
+    justify-content: center;
+  }
+}
+
+#product-comments-list-pagination {
+  margin: 10px 0;
+}
+
+#product-comments-list-pagination ul {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: center;
+}
+
+#product-comments-list-pagination ul li span {
+  padding: 1px 10px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  display: block;
+  cursor: pointer;
+  background-color: #f7f7f7;
+}
+#product-comments-list-pagination ul li:hover span {
+  background-color: #c7c7c7;
+}
+
+#product-comments-list-pagination ul li span.next i,
+#product-comments-list-pagination ul li span.prev i {
+  font-weight: 700;
+  margin-top: -2px;
+}
+
+#product-comments-list-pagination ul li.disabled {
+  pointer-events: none;
+}
+#product-comments-list-pagination ul li.disabled span i {
+  opacity: 0.3;
+}
+
+#product-comments-list-pagination ul li.active span {
+  background-color: #5a9e74;
+  color: #fff;
+}
