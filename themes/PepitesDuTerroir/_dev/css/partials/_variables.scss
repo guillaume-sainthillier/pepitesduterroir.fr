@@ -1,6 +1,6 @@
 $lightShades: #F9F8F5;
-$lightAccent: #C1A38F;
-$mainBrand: #282551;
+$lightAccent: #c5b38f;
+$mainBrand: #072045;
 $darkAccent: #9D816C;
 $darkShades: #333333;
 
@@ -23,11 +23,11 @@ $color_orange:      #f88e4f; // cam
 $color_text:        #5d5d5d; // den
 $color_text_bold:   #3d3d3d; // den dam
 $color_text_light:  #6f6f6f; // den nhat
-$color_green:       #5a9e74; // xanh la
+$color_green:       $mainBrand; // xanh la
 $color_gray:        #f7f7f7; // xam
 $color_border:      #c7c7c7; // border
 $color_box_bg:      #ffffff; // mau box
-$color_pink:        $darkAccent; // hong
+$color_pink:        $lightAccent; // hong
 $color_blue:        #007ad1; // xanh
 $color_white:       #ffffff; // trang
 $color_orange:      #f88e4f; // cam
