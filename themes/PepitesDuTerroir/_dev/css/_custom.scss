@@ -142,16 +142,16 @@
 	top: 0;
 	left: 0;
 	width: 100%;
-	height: 85%;
+	height: 100%;
 	background: $lightAccent url(../img/bg-crosssell.png) 0 0 repeat;
 	content: ' ';
 	display: block;
   }
 }
 
-.product-list .product-miniature .first-block {
+.product-list .grid .product-miniature .first-block {
   &:before {
-	height: 100%;
+	height: 85%;
   }
 }
 
