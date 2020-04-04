@@ -1,7 +1,5 @@
-#index, #product, #category, #stores, #sitemap, #search {
-  #wrapper {
-	background-color: $darkShades;
-  }
+#wrapper {
+  background-color: $darkShades;
 }
 
 #wrapper {
@@ -26,15 +24,23 @@
   .aone-homepage {
 	color: $lightShades;
 
-	h2 {
+	h2, h3, h4 {
 	  color: $lightAccent;
+	}
+
+	.card p {
+	  color: $mainBrand;
 	}
   }
 }
 
+.category-description {
+  color: white;
+}
+
 #category, #search {
   #center-column {
-	color: white;
+	//color: white;
 
 	label {
 	  color: white;
@@ -51,7 +57,7 @@
 }
 
 .products-selection .total-products p {
-  color: $lightAccent;
+  color: $lightShades;
 }
 
 .page-heading {
@@ -62,7 +68,7 @@
   color: $lightAccent;
 }
 
-.product-description-block, .product-features-block {
+.product-description-block, .product-features-block, .featured-products {
   .title-block {
 	color: $lightAccent;
   }
@@ -100,6 +106,11 @@
 .product-list .grid .product-miniature .product-name {
   text-transform: uppercase;
   background-color: white;
+  min-height: 56px;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
 }
 
 .product-list .list .product-miniature .product-name {
@@ -138,10 +149,78 @@
   }
 }
 
-.mfp-figure, .product-cover, .product-thumbnail2 {
-  background: $lightAccent url(../img/bg-crosssell.png) 0 0 repeat;
+.product-list .product-miniature .first-block {
+  &:before {
+	height: 100%;
+  }
 }
 
 .product-description p {
   font-size: 1rem;
+}
+
+.product-flags .product-flag.discount span, .product-flags .product-flag.on-sale span {
+  background: $darkShades;
+}
+
+.block-reassurance-item {
+  .material-icons {
+	font-size: 30px;
+	color: $darkShades;
+  }
+
+  span {
+	margin-left: 0.25rem;
+  }
+}
+
+#cart .block-reassurance-item {
+  color: white;
+
+  &, .material-icons {
+	color: $lightShades;
+  }
+}
+
+#cms {
+  h1 {
+	font-size: 2rem;
+  }
+
+  #content {
+	h2, h3 {
+	  text-transform: uppercase;
+	}
+
+	h2, h3, H4, h5, p, ul {
+	  color: white;
+	}
+
+	h3 {
+	  font-size: 1.375rem;
+	}
+
+	p {
+	  font-size: 1rem;
+	}
+  }
+}
+
+body#page #main, #cms #content {
+  a {
+	color: $lightAccent;
+
+  }
+}
+
+#order-slip #content p,
+#history #content > h5,
+#order-history > h5 {
+  color: white;
+}
+
+#checkout .cart-grid-body {
+  background: white;
+  border: 1px solid $border-color;
+  border-radius: 5px;
 }
