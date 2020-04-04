@@ -149,6 +149,10 @@
   }
 }
 
+.product-cover {
+  background: $lightAccent url(../img/bg-crosssell.png) 0 0 repeat;
+}
+
 .product-list .grid .product-miniature .first-block {
   &:before {
 	height: 85%;
