@@ -32,7 +32,7 @@
                             <i class="material-icons">https</i>
                         {elseif $element.image|strstr:"local_shipping"}
                             <i class="material-icons">local_shipping</i>
-                        {else}
+                        {elseif $element.image}
                             <img src="{$element.image}" alt="{$element.text|escape:'quotes'}">
                         {/if}
                         <span>{$element.text}</span>
