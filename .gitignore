@@ -17,6 +17,7 @@
 !/var/sessions
 /var/sessions/*
 
+img/
 themes/*/_dev/node_modules
 !var/sessions/.gitkeep
 
