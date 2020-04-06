@@ -1,0 +1,10 @@
+*.md
+.git
+.gitignore
+.idea/
+/node_modules/
+/public/bundles/
+/var/
+/vendor/
+*.log
+
