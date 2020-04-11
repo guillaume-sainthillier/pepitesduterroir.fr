@@ -3,7 +3,7 @@
 Plateforme e-commerce destinée à la vente de produits du terroir Français (vins, apéritifs, conserves).
 
 ## DEMO
-https://pepitesduterroir
+https://pepitesduterroir.fr
 
 ## Stack technique
 * PHP 7.1
