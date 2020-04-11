@@ -20,11 +20,20 @@
   }
 }
 
+.amenu-item .adropdown .ahtml-content ul.category-subs {
+  padding-left: 0;
+  list-style: none;
+}
+
 #index {
   .aone-homepage {
 	color: $lightShades;
 
 	h2, h3, h4 {
+	  color: $lightAccent;
+	}
+
+	& > .block > .title-block {
 	  color: $lightAccent;
 	}
 
@@ -76,12 +85,6 @@
 
 .home-blocks-top {
   margin-bottom: 2rem;
-}
-
-.block_id_1 {
-  .title-block {
-	color: $lightAccent;
-  }
 }
 
 .view-all-link a {
@@ -153,10 +156,15 @@
   background: $lightAccent url(../img/bg-crosssell.png) 0 0 repeat;
 }
 
-.product-list .grid .product-miniature .first-block {
+.product-list .grid .product-miniature .first-block,
+.product-list .columns-slick .product-miniature .first-block, {
   &:before {
 	height: 85%;
   }
+}
+
+.product-list .columns-slick .product-miniature .product-name, {
+  text-transform: uppercase;
 }
 
 .product-description p {
