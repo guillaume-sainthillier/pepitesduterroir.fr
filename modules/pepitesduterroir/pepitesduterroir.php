@@ -83,7 +83,7 @@ class PepitesDuTerroir extends Module
         $unitPrice = Context::getContext()->currentLocale->formatPrice($price / 6, 'EUR');
         if ($product instanceof \PrestaShop\PrestaShop\Adapter\Presenter\Product\ProductListingLazyArray) {
             //List product
-            return '<small class="w-100 mt-1 font-italic">Soit <span class="price product-price" >' . $unitPrice . '</span> par unité</small>';
+            return '<small class="w-100 mt-1 font-italic text-muted">Soit <span class="price product-price" >' . $unitPrice . '</span> par unité</small>';
         }
 
         $regularUnitPrice = Context::getContext()->currentLocale->formatPrice($regularPrice / 6, 'EUR');
