@@ -74,7 +74,8 @@ class PepitesDuTerroir extends Module
         }
 
         $product = $params['product'];
-        if (false === stripos($product['name'], 'carton ')) {
+        //Carton de 6 XXX, 6 verrines, ...
+        if (! preg_match('#(^|\s)6\s#', $product['name'])) {
             return;
         }
 
