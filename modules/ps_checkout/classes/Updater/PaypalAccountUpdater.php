@@ -22,8 +22,8 @@ namespace PrestaShop\Module\PrestashopCheckout\Updater;
 
 use PrestaShop\Module\PrestashopCheckout\Api\Payment\Shop;
 use PrestaShop\Module\PrestashopCheckout\Entity\PaypalAccount;
+use PrestaShop\Module\PrestashopCheckout\Exception\PsCheckoutException;
 use PrestaShop\Module\PrestashopCheckout\PersistentConfiguration;
-use PrestaShop\Module\PrestashopCheckout\PsCheckoutException;
 
 /**
  * Check and set the merchant status
@@ -35,6 +35,8 @@ class PaypalAccountUpdater
     const IN_REVIEW = 'IN_REVIEW';
     const DENIED = 'DENIED';
     const LIMITED = 'LIMITED';
+    const SUSPENDED = 'SUSPENDED';
+    const REVOKED = 'REVOKED';
 
     /* Paypal requires Merchant ID to be 13-characters long at least */
     const MIN_ID_LENGTH = 13;
@@ -44,12 +46,19 @@ class PaypalAccountUpdater
      */
     private $account;
 
+    /**
+     * PaypalAccountUpdater constructor.
+     *
+     * @param PaypalAccount $account
+     *
+     * @throws PsCheckoutException
+     */
     public function __construct(PaypalAccount $account)
     {
         $merchantId = $account->getMerchantId();
 
         if (empty($merchantId)) {
-            throw new PsCheckoutException('MerchantId cannot be empty');
+            throw new PsCheckoutException('MerchantId cannot be empty', PsCheckoutException::PSCHECKOUT_MERCHANT_IDENTIFIER_MISSING);
         }
 
         $this->setAccount($account);
@@ -105,9 +114,6 @@ class PaypalAccountUpdater
             case self::NEED_MORE_DATA:
                 $status = self::NEED_MORE_DATA;
                 break;
-            case self::DENIED:
-                $status = self::DENIED;
-                break;
             case self::IN_REVIEW:
                 $status = self::IN_REVIEW;
                 break;
@@ -130,6 +136,16 @@ class PaypalAccountUpdater
     {
         $findCapability = array_search('CUSTOM_CARD_PROCESSING', array_column($response['capabilities'], 'name'));
         $capability = $response['capabilities'][$findCapability];
+
+        // The capability can no longer be used, but there are remediation steps to regain access to the corresponding functionality.
+        if ($capability['status'] === 'SUSPENDED') {
+            return self::SUSPENDED;
+        }
+
+        // The capability can no longer be used and there are no remediation steps available to regain the functionality.
+        if ($capability['status'] === 'REVOKED') {
+            return self::REVOKED;
+        }
 
         if (isset($capability['limits'])) {
             return self::LIMITED;

@@ -1,10 +1,11 @@
 /**
- * 2007-2020 PrestaShop and Contributors
+ * Copyright since 2007 PrestaShop SA and Contributors
+ * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
  *
  * NOTICE OF LICENSE
  *
  * This source file is subject to the Academic Free License 3.0 (AFL-3.0)
- * that is bundled with this package in the file LICENSE.txt.
+ * that is bundled with this package in the file LICENSE.md.
  * It is also available through the world-wide-web at this URL:
  * https://opensource.org/licenses/AFL-3.0
  * If you did not receive a copy of the license and are unable to
@@ -12,14 +13,13 @@
  * to license@prestashop.com so we can send you a copy immediately.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2020 PrestaShop SA and Contributors
+ * @copyright Since 2007 PrestaShop SA and Contributors
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License 3.0 (AFL-3.0)
- * International Registered Trademark & Property of PrestaShop SA
  */
 
 document.addEventListener('DOMContentLoaded', () => {
   const interval = setInterval(() => {
-    if (window.paypalSdkPsCheckout !== undefined) {
+    if (undefined !== window.paypalSdkPsCheckout) {
       initPsCheckout();
       clearInterval(interval);
     }
@@ -27,11 +27,9 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initPsCheckout() {
-  if (typeof paypalOrderId === 'undefined') {
+  if (undefined === paypalOrderId) {
     throw new Error('No paypal order id');
   }
-
-  hostedFieldsErrors = JSON.parse(hostedFieldsErrors.replace(/&quot;/g, '"'));
 
   hideDefaultPaymentButtonIfPaypalIsChecked();
 
@@ -51,9 +49,6 @@ function initPsCheckout() {
 }
 
 function initSmartButtons() {
-  // remove "amp;" from the url
-  const orderValidationLinkByPaypal = validateOrderLinkByPaypal.replace(/\amp;/g, '');
-
   paypalSdkPsCheckout.Buttons({
     style: {
       shape: 'pill',
@@ -83,15 +78,12 @@ function initSmartButtons() {
       return paypalOrderId;
     },
     onApprove() {
-      window.location.replace(orderValidationLinkByPaypal);
+      window.location.replace(validateOrderLinkByPaypal);
     },
   }).render('#paypal-button-container');
 }
 
 function initHostedFields() {
-  // remove "amp;" from the url
-  const orderValidationLinkByCard = validateOrderLinkByCard.replace(/\amp;/g, '');
-
   // check whether hosted fields is eligible for that Partner Account
   if (paypalSdkPsCheckout.HostedFields.isEligible()) {
     // render hosted fields
@@ -168,25 +160,35 @@ function initHostedFields() {
         hf.submit({
           contingencies: ['3D_SECURE'], // only necessary if using 3D Secure verification
         }).then((payload) => {
-          if (payload.liabilityShifted === undefined) { // No 3DS Contingency Passed or card not enrolled to 3ds
-            window.location.replace(orderValidationLinkByCard);
-            console.log('undefined');
+          // No 3DS Contingency Passed or card not enrolled to 3ds
+          if (undefined === payload.liabilityShifted) {
+            window.location.replace(validateOrderLinkByCard);
           }
 
-          if (payload.liabilityShifted) { // 3DS Contingency Passed - Buyer confirmed Successfully
-            window.location.replace(orderValidationLinkByCard);
-            console.log('success');
+          // 3DS Contingency Passed - Buyer confirmed Successfully
+          if (true === payload.liabilityShifted) {
+            window.location.replace(validateOrderLinkByCard);
           }
 
-          if (payload.liabilityShifted === false) { // 3DS Contingency Passed, but Buyer skipped 3DS
-            // window.location.replace(orderValidationLinkByCard);
-            console.log('error');
+          // 3DS Contingency Passed, but Buyer skipped 3DS
+          if (false === payload.liabilityShifted) {
+            switch (payload.authenticationReason) {
+              case 'ERROR':
+              case 'SKIPPED_BY_BUYER':
+              case 'FAILURE':
+                displayCardError('3DS_' + payload.authenticationReason);
+                break;
+              default:
+                window.location.replace(validateOrderLinkByCard);
+            }
           }
         }).catch((err) => {
-          displayCardError(err); // display alert danger with errors
-          document.querySelector('#payment-confirmation button').removeAttribute('disabled'); // if errors keep the button enabled
-          toggleLoader(false);
-          console.log(err);
+          if (undefined !== err.details && undefined !== err.details[0] && undefined !== err.details[0].issue) {
+            displayCardError(err.details[0].issue);
+            return;
+          }
+
+          displayCardError('UNKNOWN');
         });
       });
     });
@@ -194,32 +196,21 @@ function initHostedFields() {
 }
 
 function displayCardError(err) {
-  if (typeof err.details === 'undefined') {
-    return;
+  const displayError = document.getElementById('hostedFieldsErrors');
+  const paymentConfirmationButton = document.querySelector('#payment-confirmation button');
+
+  if (undefined === err || undefined === hostedFieldsErrors[err]) {
+    err = 'UNKNOWN';
   }
 
-  const displayError = document.getElementById('hostedFieldsErrors');
-  const errorList = document.getElementById('hostedFieldsErrorList');
-
-  // reset previous messages set in the div
-  errorList.innerHTML = '';
-
   displayError.classList.remove('hide-paypal-error');
-
-  Object.keys(err.details).forEach((item) => {
-    const errorCode = err.details[item].issue;
-    const errorMessage = hostedFieldsErrors[errorCode];
-
-    const li = document.createElement('li');
-    li.appendChild(document.createTextNode(errorMessage));
-    errorList.appendChild(li);
-  });
+  displayError.textContent = hostedFieldsErrors[err];
+  paymentConfirmationButton.removeAttribute('disabled');
+  toggleLoader(false);
 }
 
 function hideDefaultPaymentButtonIfPaypalIsChecked() {
-  const conditionsToApproveId = document.getElementById('conditions-to-approve');
   const paymentDefaultButton = document.getElementById('payment-confirmation');
-
   const paypalOptions = document.getElementsByName('payment-option');
 
   for (let i = 0; i < paypalOptions.length; i++) {
@@ -228,16 +219,16 @@ function hideDefaultPaymentButtonIfPaypalIsChecked() {
     item.addEventListener('click', () => {
       if (item.checked && item.dataset.moduleName === paypalPaymentOption) {
         paymentDefaultButton.classList.add('paypal-hide-default');
-        conditionsToApproveId.classList.add('paypal-hide-default');
+        toggleConditionsToApprove(true);
       } else {
         paymentDefaultButton.classList.remove('paypal-hide-default');
-        conditionsToApproveId.classList.remove('paypal-hide-default');
+        toggleConditionsToApprove(false);
       }
     });
   }
 }
 
-function test(event) {
+function testPsPayPalCard(event) {
   event.preventDefault();
   document.querySelector('#hosted-fields-form button').click();
 }
@@ -249,5 +240,19 @@ function toggleLoader(enable) {
     document.querySelector('#payment-confirmation button').prepend(span);
   } else {
     document.querySelector('.spinner-hosted-fields').remove();
+  }
+}
+
+function toggleConditionsToApprove(enable) {
+  const conditionsToApproveId = document.getElementById('conditions-to-approve');
+
+  if (null === conditionsToApproveId) {
+    return;
+  }
+
+  if (true === enable) {
+    conditionsToApproveId.classList.add('paypal-hide-default');
+  } else {
+    conditionsToApproveId.classList.remove('paypal-hide-default');
   }
 }

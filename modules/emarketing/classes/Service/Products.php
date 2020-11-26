@@ -7,7 +7,7 @@
  * you accept the licence agreement.
  *
  * @author    emarketing www.emarketing.com <integrations@emarketing.com>
- * @copyright 2019 easymarketing AG
+ * @copyright 2020 emarketing AG
  * @license   https://opensource.org/licenses/GPL-3.0 GNU General Public License version 3
  */
 
@@ -17,6 +17,7 @@ use Emarketing\Service\Products\Variants;
 use Emarketing\Service\Products\Images;
 use Emarketing\Service\Products\Carriers;
 use Emarketing\Service\Products\Features;
+use Emarketing\Service\Products\PriceCalculation;
 
 /**
  * Class Products
@@ -45,6 +46,11 @@ class Products
     private $serviceFeatures;
 
     /**
+     * @var PriceCalculation
+     */
+    private $priceCalculation;
+
+    /**
      * @var \Context
      */
     private $context;
@@ -58,6 +64,7 @@ class Products
         $this->serviceImages = new Images();
         $this->serviceCarriers = new Carriers();
         $this->serviceFeatures = new Features();
+        $this->priceCalculation = new PriceCalculation();
 
         $this->context = \Context::getContext();
     }
@@ -67,10 +74,11 @@ class Products
      * @param $limit
      * @param $idLang
      * @param $idCountry
+     * @param $idCurrency
      * @return array
-     * @throws \Exception
+     * @throws \PrestaShopException
      */
-    public function buildProductsInformation($offset, $limit, $idLang, $idCountry)
+    public function buildProductsInformation($offset, $limit, $idLang, $idCountry, $idCurrency)
     {
         $productsData = array();
 
@@ -79,7 +87,7 @@ class Products
         $products = $this->getAllProducts($offset, $limit, $idLang);
 
         foreach ($products as $product) {
-            $productData = $this->getProductDetails($product, $idLang, $idCountry);
+            $productData = $this->getProductDetails($product, $idLang, $idCountry, $idCurrency);
 
             $productsData[$product['id_product']] = $productData;
         }
@@ -112,7 +120,7 @@ class Products
      * @return array
      * @throws \PrestaShopException
      */
-    private function getProductDetails($product, $idLang, $idCountry)
+    private function getProductDetails($product, $idLang, $idCountry, $idCurrency)
     {
         $productData = array();
 
@@ -122,7 +130,7 @@ class Products
 
         $productData['additional'] = $this->getAdditionalInformation($psProduct, $idLang);
 
-        $productData['variants'] = $this->serviceVariants->buildVariantInformation($psProduct, $idLang);
+        $productData['variants'] = $this->serviceVariants->buildVariantInformation($psProduct, $idLang, $idCurrency);
 
         $productData['images'] = $this->serviceImages->buildImageInformation($psProduct, $idLang);
 
@@ -131,6 +139,9 @@ class Products
         $productData['features'] = $this->serviceFeatures->buildFeatureInformation($psProduct, $idLang);
 
         $productData['attributes'] = $psProduct->getAttributesGroups($idLang);
+
+        $productData['plugin_price'] = $this->priceCalculation->getFinalPrice($idCurrency, $psProduct->id, false);
+        $productData['plugin_sale_price'] = $this->priceCalculation->getFinalPrice($idCurrency, $psProduct->id, true);
 
         return $productData;
     }

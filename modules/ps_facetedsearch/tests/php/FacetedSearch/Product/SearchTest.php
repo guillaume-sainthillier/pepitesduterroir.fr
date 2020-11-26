@@ -1,27 +1,21 @@
 <?php
 /**
- * 2007-2019 PrestaShop.
+ * Copyright since 2007 PrestaShop SA and Contributors
+ * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
  *
  * NOTICE OF LICENSE
  *
  * This source file is subject to the Academic Free License 3.0 (AFL-3.0)
- * that is bundled with this package in the file LICENSE.txt.
+ * that is bundled with this package in the file LICENSE.md.
  * It is also available through the world-wide-web at this URL:
  * https://opensource.org/licenses/AFL-3.0
  * If you did not receive a copy of the license and are unable to
  * obtain it through the world-wide-web, please send an email
  * to license@prestashop.com so we can send you a copy immediately.
  *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade PrestaShop to newer
- * versions in the future. If you wish to customize PrestaShop for your
- * needs please refer to http://www.prestashop.com for more information.
- *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2019 PrestaShop SA
+ * @copyright Since 2007 PrestaShop SA and Contributors
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License 3.0 (AFL-3.0)
- * International Registered Trademark & Property of PrestaShop SA
  */
 
 namespace PrestaShop\Module\FacetedSearch\Tests\Product;
@@ -32,8 +26,8 @@ use Mockery;
 use Mockery\Adapter\Phpunit\MockeryTestCase;
 use PrestaShop\Module\FacetedSearch\Adapter\MySQL;
 use PrestaShop\Module\FacetedSearch\Product\Search;
-use Tools;
 use stdClass;
+use Tools;
 
 class SearchTest extends MockeryTestCase
 {
@@ -52,6 +46,7 @@ class SearchTest extends MockeryTestCase
                     'PS_ORDER_OUT_OF_STOCK' => true,
                     'PS_HOME_CATEGORY' => true,
                     'PS_LAYERED_FULL_TREE' => false,
+                    'PS_LAYERED_FILTER_BY_DEFAULT_CATEGORY' => true,
                 ];
 
                 return $valueMap[$arg];
@@ -98,6 +93,13 @@ class SearchTest extends MockeryTestCase
         $this->assertEquals(
             [
                 'id_category_default' => [
+                    '=' => [
+                        [
+                            null,
+                        ],
+                    ],
+                ],
+                'id_category' => [
                     '=' => [
                         [
                             null,
@@ -233,6 +235,9 @@ class SearchTest extends MockeryTestCase
                 'id_category' => [
                     '=' => [
                         [
+                            null,
+                        ],
+                        [
                             6,
                         ],
                     ],
@@ -261,7 +266,7 @@ class SearchTest extends MockeryTestCase
                         ],
                     ],
                 ],
-                'with_attributes' => [
+                'with_attributes_0' => [
                     [
                         [
                             'id_attribute',
@@ -272,7 +277,7 @@ class SearchTest extends MockeryTestCase
                         ],
                     ],
                 ],
-                'with_features' => [
+                'with_features_0' => [
                     [
                         [
                             'id_feature_value',
@@ -306,7 +311,8 @@ class SearchTest extends MockeryTestCase
         $this->search->initSearch(
             [
                 'id_feature' => [
-                    [[1], [2, 3, 4]],
+                    [1],
+                    [2, 3, 4],
                 ],
             ]
         );
@@ -337,30 +343,42 @@ class SearchTest extends MockeryTestCase
                         ],
                     ],
                 ],
+                'id_category' => [
+                    '=' => [
+                        [
+                            null,
+                        ],
+                    ],
+                ],
             ],
             $this->search->getSearchAdapter()->getInitialPopulation()->getFilters()->toArray()
         );
 
         $this->assertEquals(
             [
-                'with_features' => [
+                'with_features_0' => [
                     [
                         [
                             'id_feature_value',
                             [
-                                [
-                                    1,
-                                ],
-                                [
-                                    2,
-                                    3,
-                                    4,
-                                ],
+                                1,
                             ],
                         ],
                     ],
                 ],
-            ],
+                'with_features_1' => [
+                    [
+                        [
+                            'id_feature_value',
+                            [
+                                2,
+                                3,
+                                4,
+                            ],
+                        ],
+                    ],
+                ],
+           ],
             $this->search->getSearchAdapter()->getInitialPopulation()->getOperationsFilters()->toArray()
         );
     }
@@ -383,7 +401,8 @@ class SearchTest extends MockeryTestCase
         $this->search->initSearch(
             [
                 'id_attribute_group' => [
-                    [[1], [2, 3, 4]],
+                    [1],
+                    [2, 3, 4],
                 ],
             ]
         );
@@ -414,25 +433,37 @@ class SearchTest extends MockeryTestCase
                         ],
                     ],
                 ],
+                'id_category' => [
+                    '=' => [
+                        [
+                            null,
+                        ],
+                    ],
+                ],
             ],
             $this->search->getSearchAdapter()->getInitialPopulation()->getFilters()->toArray()
         );
 
         $this->assertEquals(
             [
-                'with_attributes' => [
+                'with_attributes_0' => [
                     [
                         [
                             'id_attribute',
                             [
-                                [
-                                    1,
-                                ],
-                                [
-                                    2,
-                                    3,
-                                    4,
-                                ],
+                                1,
+                            ],
+                        ],
+                    ],
+                ],
+                'with_attributes_1' => [
+                    [
+                        [
+                            'id_attribute',
+                            [
+                                2,
+                                3,
+                                4,
                             ],
                         ],
                     ],

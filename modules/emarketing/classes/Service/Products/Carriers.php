@@ -7,7 +7,7 @@
  * you accept the licence agreement.
  *
  * @author    emarketing www.emarketing.com <integrations@emarketing.com>
- * @copyright 2019 easymarketing AG
+ * @copyright 2020 emarketing AG
  * @license   https://opensource.org/licenses/GPL-3.0 GNU General Public License version 3
  */
 

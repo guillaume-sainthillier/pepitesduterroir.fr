@@ -7,7 +7,7 @@
  * you accept the licence agreement.
  *
  * @author    emarketing www.emarketing.com <integrations@emarketing.com>
- * @copyright 2019 easymarketing AG
+ * @copyright 2020 emarketing AG
  * @license   https://opensource.org/licenses/GPL-3.0 GNU General Public License version 3
  */
 
@@ -29,7 +29,7 @@ class Emarketing extends Module
     {
         $this->name = 'emarketing';
         $this->tab = 'advertising_marketing';
-        $this->version = '2.0.8';
+        $this->version = '2.2.0';
         $this->author = 'emarketing';
         $this->module_key = 'f28d5933d349ca55af63ed0b10f6ca33';
         $this->need_instance = 0;
@@ -51,8 +51,6 @@ class Emarketing extends Module
 
     /**
      * @return bool
-     * @throws PrestaShopDatabaseException
-     * @throws PrestaShopException
      */
     public function install()
     {
@@ -61,9 +59,15 @@ class Emarketing extends Module
         }
 
         \Configuration::updateValue('EMARKETING_SHOPTOKEN', "");
+        \Configuration::updateValue('EMARKETING_AUTHORIZE_JWT', "");
         \Configuration::updateValue('EMARKETING_GLOBAL_SITE_TRACKER', "");
         \Configuration::updateValue('EMARKETING_CONVERSION_TRACKER', "");
         \Configuration::updateValue('EMARKETING_VERIFICATION_TAG', "");
+        \Configuration::updateValue('EMARKETING_FB_GLOBAL', "");
+        \Configuration::updateValue('EMARKETING_FB_VIEWCONTENT', "");
+        \Configuration::updateValue('EMARKETING_FB_ADDTOCART', "");
+        \Configuration::updateValue('EMARKETING_FB_PURCHASE', "");
+        \Configuration::updateValue('EMARKETING_ROUTETOKEN', \Tools::passwdGen());
 
         $this->registerHook('displayHeader');
 
@@ -115,10 +119,16 @@ class Emarketing extends Module
      */
     public function getContent()
     {
+        $shopToken = \Configuration::get('EMARKETING_SHOPTOKEN');
+        $routeToken = \Configuration::get('EMARKETING_ROUTETOKEN');
+
         $link = new \Link();
 
         $templateData = array(
-            'ecom_url' => $link->getModuleLink($this->name, 'ecom')
+            'signupUrl' => $link->getModuleLink($this->name, 'signup', array('token' => $routeToken)),
+            'linkUrl' => $link->getModuleLink($this->name, 'link', array('token' => $routeToken)),
+            'loginUrl' => $link->getModuleLink($this->name, 'login', array('token' => $routeToken)),
+            'emptyShopToken' => empty($shopToken)
         );
 
         $this->smarty->assign($templateData);
@@ -127,8 +137,6 @@ class Emarketing extends Module
     }
 
     /**
-     * @throws PrestaShopDatabaseException
-     * @throws PrestaShopException
      */
     private function installTab()
     {
@@ -149,10 +157,12 @@ class Emarketing extends Module
             $tab->icon = 'track_changes';
             $tab->id_parent = (int)Tab::getIdFromClassName('IMPROVE');
             $tab->save();
-        } else {
-            $tab->id_parent = 0;
-            $tab->add();
+
+            return;
         }
+
+        $tab->id_parent = 0;
+        $tab->add();
     }
 
     /**

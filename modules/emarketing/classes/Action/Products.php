@@ -7,7 +7,7 @@
  * you accept the licence agreement.
  *
  * @author    emarketing www.emarketing.com <integrations@emarketing.com>
- * @copyright 2019 easymarketing AG
+ * @copyright 2020 emarketing AG
  * @license   https://opensource.org/licenses/GPL-3.0 GNU General Public License version 3
  */
 
@@ -37,11 +37,11 @@ class Products
 
         $idCountry = $this->getIdCountry($postData);
 
+        $idCurrency = $this->getIdCurrency($postData);
+
         $serviceProducts = new \Emarketing\Service\Products;
 
-        $productData = $serviceProducts->buildProductsInformation($offset, $limit, $idLang, $idCountry);
-
-        return $productData;
+        return $serviceProducts->buildProductsInformation($offset, $limit, $idLang, $idCountry, $idCurrency);
     }
 
     /**
@@ -83,5 +83,18 @@ class Products
         }
 
         return $postData['id_country'];
+    }
+
+    /**
+     * @param $postData
+     * @return string
+     */
+    private function getIdCurrency($postData)
+    {
+        if (!isset($postData['id_currency']) || !is_numeric($postData['id_currency'])) {
+            return \Configuration::get('PS_CURRENCY_DEFAULT');
+        }
+
+        return $postData['id_currency'];
     }
 }

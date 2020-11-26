@@ -7,7 +7,7 @@
  * you accept the licence agreement.
  *
  * @author    emarketing www.emarketing.com <integrations@emarketing.com>
- * @copyright 2019 easymarketing AG
+ * @copyright 2020 emarketing AG
  * @license   https://opensource.org/licenses/GPL-3.0 GNU General Public License version 3
  */
 
@@ -24,7 +24,7 @@ class Gateway
     /**
      * @var string
      */
-    private $ecomConnectUrl = "https://app.emarketing.com/shopsystem-auth/connect?connect-jwt=";
+    private $ecomUrl = "https://app.emarketing.com";
 
     /**
      * @var string
@@ -39,27 +39,61 @@ class Gateway
     /**
      * @return string
      */
-    public function getEcomUrl()
+    public function login()
     {
         $token = $this->getToken();
-        $url = $this->ecomSignInUrl;
 
-        if (empty($token)) {
-            $token = $this->register();
-            $url = $this->ecomConnectUrl;
-
-            if (empty($token)) {
-                return false;
-            }
+        if (empty($token) || strpos($token, ':') === false) {
+            return $this->ecomUrl;
         }
 
         $jwt = $this->fetchJwt($token);
 
         if (empty($jwt)) {
-            return false;
+            return $this->ecomUrl;
         }
 
-        return $url . $jwt;
+        return $this->ecomSignInUrl . $jwt;
+    }
+
+    /**
+     * @return string
+     */
+    public function signup()
+    {
+        $token = $this->register();
+
+        if (empty($token)) {
+            return $this->ecomUrl;
+        }
+
+        $jwt = $this->fetchJwt($token);
+
+        if (empty($jwt)) {
+            return $this->ecomUrl;
+        }
+
+        return $this->ecomSignInUrl . $jwt;
+    }
+
+    /**
+     * @return string
+     */
+    public function linkAccount()
+    {
+        $token = $this->getToken();
+
+        if (!empty($token)) {
+            return $this->ecomUrl;
+        }
+
+        $jwt = $this->authorize();
+
+        if (empty($jwt)) {
+            return $this->ecomUrl;
+        }
+
+        return $this->ecomSignInUrl . $jwt;
     }
 
     /**
@@ -86,9 +120,11 @@ class Gateway
     {
         $data = array(
             "partner_short_name" => "prestashop",
-            "language" => strtolower(substr(\Language::getIsoById(\Configuration::get('PS_LANG_DEFAULT')), 0, 2)),
-            "country" => strtoupper(\Country::getIsoById(\Configuration::get('PS_COUNTRY_DEFAULT'))),
-            "email" => \Configuration::get('PS_SHOP_EMAIL')
+            "authorizations" => ['datafeed_api'],
+            "language" => \Tools::strtolower(\Tools::substr(\Language::getIsoById(\Configuration::get('PS_LANG_DEFAULT')), 0, 2)),
+            "country" => \Tools::strtoupper(\Country::getIsoById(\Configuration::get('PS_COUNTRY_DEFAULT'))),
+            "email" => \Configuration::get('PS_SHOP_EMAIL'),
+            "version" => \Module::getInstanceByName('emarketing')->version
         );
 
         $data = $this->validateRegistrationData($data);
@@ -112,7 +148,7 @@ class Gateway
      */
     private function validateRegistrationData($data)
     {
-        $schema = json_decode(file_get_contents('https://ecommerce-os.s3.eu-west-1.amazonaws.com/schema/partner.json'));
+        $schema = json_decode(\Tools::file_get_contents('https://ecommerce-os.s3.eu-west-1.amazonaws.com/schema/partner.json'));
         $languages = $schema->links[0]->schema->properties->language->enum;
         $countries = $schema->links[0]->schema->properties->country->enum;
 
@@ -146,6 +182,32 @@ class Gateway
         }
 
         return $response['body']->token;
+    }
+
+    /**
+     * @return bool|string
+     */
+    private function authorize()
+    {
+        $data = array(
+            "partner_short_name" => "prestashop",
+            'authorizations' => ['datafeed_api'],
+            "version" => \Module::getInstanceByName('emarketing')->version
+        );
+
+        $header = "Origin: " . \Context::getContext()->shop->getBaseURL(true);
+
+        $response = $this->sendRequest('/authorize', $header, $data);
+
+        if ($response['code'] !== 200 || empty($response['body']->uuid)) {
+            return false;
+        }
+
+        $this->saveToken($response['body']->uuid);
+
+        \Configuration::updateValue('EMARKETING_AUTHORIZE_JWT', $response['body']->jwt);
+
+        return $response['body']->jwt;
     }
 
     /**

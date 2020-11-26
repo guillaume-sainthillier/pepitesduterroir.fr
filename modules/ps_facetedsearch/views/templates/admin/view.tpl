@@ -1,28 +1,23 @@
 {**
-  * 2007-2019 PrestaShop.
-  *
-  * NOTICE OF LICENSE
-  *
-  * This source file is subject to the Academic Free License 3.0 (AFL-3.0)
-  * that is bundled with this package in the file LICENSE.txt.
-  * It is also available through the world-wide-web at this URL:
-  * https://opensource.org/licenses/AFL-3.0
-  * If you did not receive a copy of the license and are unable to
-  * obtain it through the world-wide-web, please send an email
-  * to license@prestashop.com so we can send you a copy immediately.
-  *
-  * DISCLAIMER
-  *
-  * Do not edit or add to this file if you wish to upgrade PrestaShop to newer
-  * versions in the future. If you wish to customize PrestaShop for your
-  * needs please refer to http://www.prestashop.com for more information.
-  *
-  * @author    PrestaShop SA <contact@prestashop.com>
-  * @copyright 2007-2019 PrestaShop SA
-  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License 3.0 (AFL-3.0)
-  * International Registered Trademark & Property of PrestaShop SA
-  *}
+ * Copyright since 2007 PrestaShop SA and Contributors
+ * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Academic Free License 3.0 (AFL-3.0)
+ * that is bundled with this package in the file LICENSE.md.
+ * It is also available through the world-wide-web at this URL:
+ * https://opensource.org/licenses/AFL-3.0
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to license@prestashop.com so we can send you a copy immediately.
+ *
+ * @author    PrestaShop SA <contact@prestashop.com>
+ * @copyright Since 2007 PrestaShop SA and Contributors
+ * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License 3.0 (AFL-3.0)
+ *}
 {include file='./_partials/messages.tpl'}
+{include file='./_functions/show_limit.tpl'}
 
 <div class="panel">
   <h3><i class="icon-cogs"></i> {l s='New filters template' d='Modules.Facetedsearch.Admin'}</h3>
@@ -85,16 +80,12 @@
                     {/if}
                   </div>
                   <div class="col-lg-3">
-                    <label class="control-label col-lg-6">{l s='Filter result limit:' d='Modules.Facetedsearch.Admin'}</label>
-                    <div class="col-lg-6">
-                      <select name="{$filterId}_filter_show_limit">
-                        <option value="0">{l s='No limit' d='Modules.Facetedsearch.Admin'}</option>
-                        <option value="4">4</option>
-                        <option value="5">5</option>
-                        <option value="10">10</option>
-                        <option value="20">20</option>
-                      </select>
-                    </div>
+                    {if empty($filter['slider'])}
+                      <label class="control-label col-lg-6">{l s='Filter result limit:' d='Modules.Facetedsearch.Admin'}</label>
+                      <div class="col-lg-6">
+                        {call get_limit_select element=$filterId}
+                      </div>
+                    {/if}
                   </div>
                 </li>
               {/foreach}
@@ -141,13 +132,7 @@
                     <div class="col-lg-3 pull-right">
                       <label class="control-label col-lg-6">{l s='Filter result limit:' d='Modules.Facetedsearch.Admin'}</label>
                       <div class="col-lg-6">
-                        <select name="layered_selection_ag_{(int)$attribute_group['id_attribute_group']}_filter_show_limit">
-                          <option value="0">{l s='No limit' d='Modules.Facetedsearch.Admin'}</option>
-                          <option value="4">4</option>
-                          <option value="5">5</option>
-                          <option value="10">10</option>
-                          <option value="20">20</option>
-                        </select>
+                        {call get_limit_select element="layered_selection_ag_{(int)$attribute_group['id_attribute_group']}"}
                       </div>
                     </div>
                     <div class="col-lg-3 pull-right">
@@ -203,13 +188,7 @@
                     <div class="col-lg-3 pull-right">
                       <label class="control-label col-lg-6">{l s='Filter result limit:' d='Modules.Facetedsearch.Admin'}</label>
                       <div class="col-lg-6">
-                        <select name="layered_selection_feat_{(int)$feature['id_feature']}_filter_show_limit">
-                          <option value="0">{l s='No limit' d='Modules.Facetedsearch.Admin'}</option>
-                          <option value="4">4</option>
-                          <option value="5">5</option>
-                          <option value="10">10</option>
-                          <option value="20">20</option>
-                        </select>
+                        {call get_limit_select element="layered_selection_feat_{(int)$feature['id_feature']}"}
                       </div>
                     </div>
                     <div class="col-lg-3 pull-right">

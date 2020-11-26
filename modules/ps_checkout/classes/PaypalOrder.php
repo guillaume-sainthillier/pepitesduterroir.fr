@@ -42,6 +42,8 @@ class PaypalOrder
 
     /**
      * Load paypal order data
+     *
+     * @param string $id PayPal Order identifier
      */
     private function loadOrder($id)
     {
@@ -82,5 +84,13 @@ class PaypalOrder
     public function setOrder($order)
     {
         $this->order = $order;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isLoaded()
+    {
+        return false === empty($this->order);
     }
 }

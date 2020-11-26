@@ -7,7 +7,7 @@
  * you accept the licence agreement.
  *
  * @author    emarketing www.emarketing.com <integrations@emarketing.com>
- * @copyright 2019 easymarketing AG
+ * @copyright 2020 emarketing AG
  * @license   https://opensource.org/licenses/GPL-3.0 GNU General Public License version 3
  */
 
@@ -37,6 +37,9 @@ class EmarketingServiceModuleFrontController extends ModuleFrontController
     public function init()
     {
         header('Content-Type: application/json; charset=utf-8', true);
+
+        $module = \Module::getInstanceByName('emarketing');
+        header('X-Plugin-Version: ' . $module->version, true);
 
         $this->handleErrors();
     }
@@ -88,9 +91,17 @@ class EmarketingServiceModuleFrontController extends ModuleFrontController
     private function authenticate($postData)
     {
         $token = \Configuration::get('EMARKETING_SHOPTOKEN');
-        $tokenParts = explode(':', $token);
 
-        if (!empty($postData['authorization']) && $postData['authorization'] == $tokenParts[1]) {
+        if (empty($postData['authorization']) || empty($token)) {
+            return false;
+        }
+
+        if (strpos($token, ':') !== false) {
+            $tokenParts = explode(':', $token);
+            $token = $tokenParts[1];
+        }
+
+        if ($postData['authorization'] == $token) {
             return true;
         }
 
@@ -119,11 +130,15 @@ class EmarketingServiceModuleFrontController extends ModuleFrontController
                 $action = new \Emarketing\Action\Products;
                 return $action->fetchProducts($postData);
             case 'tracker':
-                $action = new \Emarketing\Action\Tracker;
+            case 'google':
+                $action = new \Emarketing\Action\GoogleTracker;
                 return $action->receiveTracker($postData);
             case 'verification':
                 $action = new \Emarketing\Action\Verification;
                 return $action->receiveTag($postData);
+            case 'facebook':
+                $action = new \Emarketing\Action\FacebookPixel;
+                return $action->receivePixel($postData);
             default:
                 throw new \Emarketing\ClientError('Not a valid action');
         }

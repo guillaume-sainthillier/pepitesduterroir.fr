@@ -1,35 +1,31 @@
 <?php
 /**
- * 2007-2019 PrestaShop.
+ * Copyright since 2007 PrestaShop SA and Contributors
+ * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
  *
  * NOTICE OF LICENSE
  *
  * This source file is subject to the Academic Free License 3.0 (AFL-3.0)
- * that is bundled with this package in the file LICENSE.txt.
+ * that is bundled with this package in the file LICENSE.md.
  * It is also available through the world-wide-web at this URL:
  * https://opensource.org/licenses/AFL-3.0
  * If you did not receive a copy of the license and are unable to
  * obtain it through the world-wide-web, please send an email
  * to license@prestashop.com so we can send you a copy immediately.
  *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade PrestaShop to newer
- * versions in the future. If you wish to customize PrestaShop for your
- * needs please refer to http://www.prestashop.com for more information.
- *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2019 PrestaShop SA
+ * @copyright Since 2007 PrestaShop SA and Contributors
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License 3.0 (AFL-3.0)
- * International Registered Trademark & Property of PrestaShop SA
  */
 
 namespace PrestaShop\Module\FacetedSearch\Adapter;
 
-use Db;
+use Configuration;
 use Context;
-use StockAvailable;
+use Db;
 use Doctrine\Common\Collections\ArrayCollection;
+use Product;
+use StockAvailable;
 
 class MySQL extends AbstractAdapter
 {
@@ -47,11 +43,6 @@ class MySQL extends AbstractAdapter
      * @var string
      */
     const INNER_JOIN = 'INNER JOIN';
-
-    /**
-     * @var string
-     */
-    const STRAIGHT_JOIN = 'STRAIGHT_JOIN';
 
     /**
      * {@inheritdoc}
@@ -111,38 +102,28 @@ class MySQL extends AbstractAdapter
             $referenceTable = '(' . $this->getInitialPopulation()->getQuery() . ')';
         }
 
-        if (empty($this->getSelectFields())
-            && empty($this->getFilters())
-            && empty($this->getGroupFields())
-            && empty($this->getOrderField())
-        ) {
-            // avoid adding an extra SELECT FROM (SELECT ...) if it's not needed
-            $query = $referenceTable;
-            $this->setOrderField('');
-        } else {
-            $query = 'SELECT ';
+        $query = 'SELECT ';
 
-            $selectFields = $this->computeSelectFields($filterToTableMapping);
-            $whereConditions = $this->computeWhereConditions($filterToTableMapping);
-            $joinConditions = $this->computeJoinConditions($filterToTableMapping);
-            $groupFields = $this->computeGroupByFields($filterToTableMapping);
+        $selectFields = $this->computeSelectFields($filterToTableMapping);
+        $whereConditions = $this->computeWhereConditions($filterToTableMapping);
+        $joinConditions = $this->computeJoinConditions($filterToTableMapping);
+        $groupFields = $this->computeGroupByFields($filterToTableMapping);
 
-            $query .= implode(', ', $selectFields) . ' FROM ' . $referenceTable . ' p';
+        $query .= implode(', ', $selectFields) . ' FROM ' . $referenceTable . ' p';
 
-            foreach ($joinConditions as $joinAliasInfos) {
-                foreach ($joinAliasInfos as $tableAlias => $joinInfos) {
-                    $query .= ' ' . $joinInfos['joinType'] . ' ' . _DB_PREFIX_ . $joinInfos['tableName'] . ' ' .
-                        $tableAlias . ' ON ' . $joinInfos['joinCondition'];
-                }
+        foreach ($joinConditions as $joinAliasInfos) {
+            foreach ($joinAliasInfos as $tableAlias => $joinInfos) {
+                $query .= ' ' . $joinInfos['joinType'] . ' ' . _DB_PREFIX_ . $joinInfos['tableName'] . ' ' .
+                       $tableAlias . ' ON ' . $joinInfos['joinCondition'];
             }
+        }
 
-            if (!empty($whereConditions)) {
-                $query .= ' WHERE ' . implode(' AND ', $whereConditions);
-            }
+        if (!empty($whereConditions)) {
+            $query .= ' WHERE ' . implode(' AND ', $whereConditions);
+        }
 
-            if ($groupFields) {
-                $query .= ' GROUP BY ' . implode(', ', $groupFields);
-            }
+        if ($groupFields) {
+            $query .= ' GROUP BY ' . implode(', ', $groupFields);
         }
 
         if ($orderField) {
@@ -174,20 +155,20 @@ class MySQL extends AbstractAdapter
                 'tableName' => 'product_attribute',
                 'tableAlias' => 'pa',
                 'joinCondition' => '(p.id_product = pa.id_product)',
-                'joinType' => self::STRAIGHT_JOIN,
+                'joinType' => self::LEFT_JOIN,
             ],
             'id_attribute' => [
                 'tableName' => 'product_attribute_combination',
                 'tableAlias' => 'pac',
                 'joinCondition' => '(pa.id_product_attribute = pac.id_product_attribute)',
-                'joinType' => self::STRAIGHT_JOIN,
+                'joinType' => self::LEFT_JOIN,
                 'dependencyField' => 'id_product_attribute',
             ],
             'id_attribute_group' => [
                 'tableName' => 'attribute',
                 'tableAlias' => 'a',
                 'joinCondition' => '(a.id_attribute = pac.id_attribute)',
-                'joinType' => self::STRAIGHT_JOIN,
+                'joinType' => self::INNER_JOIN,
                 'dependencyField' => 'id_attribute',
             ],
             'id_feature' => [
@@ -259,42 +240,46 @@ class MySQL extends AbstractAdapter
             'out_of_stock' => [
                 'tableName' => 'stock_available',
                 'tableAlias' => 'sa',
-                'joinCondition' => '(p.id_product = sa.id_product AND 0 = sa.id_product_attribute ' .
+                'joinCondition' => '(p.id_product = sa.id_product AND IFNULL(pac.id_product_attribute, 0) = sa.id_product_attribute' .
                 $stockCondition . ')',
                 'joinType' => self::LEFT_JOIN,
+                'dependencyField' => 'id_attribute',
             ],
             'quantity' => [
                 'tableName' => 'stock_available',
                 'tableAlias' => 'sa',
-                'joinCondition' => '(p.id_product = sa.id_product AND 0 = sa.id_product_attribute ' .
+                'joinCondition' => '(p.id_product = sa.id_product AND IFNULL(pac.id_product_attribute, 0) = sa.id_product_attribute' .
                 $stockCondition . ')',
                 'joinType' => self::LEFT_JOIN,
+                'dependencyField' => 'id_attribute',
+                'aggregateFunction' => 'SUM',
+                'aggregateFieldName' => 'quantity',
             ],
             'price_min' => [
                 'tableName' => 'layered_price_index',
                 'tableAlias' => 'psi',
-                'joinCondition' => '(psi.id_product = p.id_product AND psi.id_currency = ' .
+                'joinCondition' => '(psi.id_product = p.id_product AND psi.id_shop = ' . $this->getContext()->shop->id . ' AND psi.id_currency = ' .
                 $this->getContext()->currency->id . ' AND psi.id_country = ' . $this->getContext()->country->id . ')',
                 'joinType' => self::INNER_JOIN,
             ],
             'price_max' => [
                 'tableName' => 'layered_price_index',
                 'tableAlias' => 'psi',
-                'joinCondition' => '(psi.id_product = p.id_product AND psi.id_currency = ' .
+                'joinCondition' => '(psi.id_product = p.id_product AND psi.id_shop = ' . $this->getContext()->shop->id . ' AND psi.id_currency = ' .
                 $this->getContext()->currency->id . ' AND psi.id_country = ' . $this->getContext()->country->id . ')',
                 'joinType' => self::INNER_JOIN,
             ],
             'range_start' => [
                 'tableName' => 'layered_price_index',
                 'tableAlias' => 'psi',
-                'joinCondition' => '(psi.id_product = p.id_product AND psi.id_currency = ' .
+                'joinCondition' => '(psi.id_product = p.id_product AND psi.id_shop = ' . $this->getContext()->shop->id . ' AND psi.id_currency = ' .
                 $this->getContext()->currency->id . ' AND psi.id_country = ' . $this->getContext()->country->id . ')',
                 'joinType' => self::INNER_JOIN,
             ],
             'range_end' => [
                 'tableName' => 'layered_price_index',
                 'tableAlias' => 'psi',
-                'joinCondition' => '(psi.id_product = p.id_product AND psi.id_currency = ' .
+                'joinCondition' => '(psi.id_product = p.id_product AND psi.id_shop = ' . $this->getContext()->shop->id . ' AND psi.id_currency = ' .
                 $this->getContext()->currency->id . ' AND psi.id_country = ' . $this->getContext()->country->id . ')',
                 'joinType' => self::INNER_JOIN,
             ],
@@ -304,6 +289,14 @@ class MySQL extends AbstractAdapter
                 'joinCondition' => '(cg.id_category = c.id_category)',
                 'joinType' => self::LEFT_JOIN,
                 'dependencyField' => 'nleft',
+            ],
+            'sales' => [
+                'tableName' => 'product_sale',
+                'tableAlias' => 'psales',
+                'fieldName' => 'quantity',
+                'fieldAlias' => 'sales',
+                'joinCondition' => '(psales.id_product = p.id_product)',
+                'joinType' => self::LEFT_JOIN,
             ],
         ];
 
@@ -317,9 +310,10 @@ class MySQL extends AbstractAdapter
      *
      * @return string
      */
-    private function computeOrderByField(array $filterToTableMapping)
+    protected function computeOrderByField(array $filterToTableMapping)
     {
         $orderField = $this->getOrderField();
+
         if ($this->getInitialPopulation() !== null && !empty($orderField)) {
             $this->getInitialPopulation()->addSelectField($orderField);
         }
@@ -334,22 +328,101 @@ class MySQL extends AbstractAdapter
             $orderField = $this->getOrderDirection() === 'asc' ? 'price_min' : 'price_max';
         }
 
-        if (array_key_exists($orderField, $filterToTableMapping)
+        $orderField = $this->computeFieldName($orderField, $filterToTableMapping, true);
+
+        // put some products at the end of the list
+        $orderField = $this->computeShowLast($orderField, $filterToTableMapping);
+
+        return $orderField;
+    }
+
+    /**
+     * Sort product list: InStock, OOPS with qty 0, OutOfStock
+     *
+     * @param string $orderField
+     * @param array $filterToTableMapping
+     *
+     * @return string
+     */
+    protected function computeShowLast($orderField, $filterToTableMapping)
+    {
+        // allow only if feature is enabled & it is main product list query
+        if ($this->getInitialPopulation() === null
+            || empty($orderField)
+            || !Configuration::get('PS_LAYERED_FILTER_SHOW_OUT_OF_STOCK_LAST')
+        ) {
+            return $orderField;
+        }
+
+        $this->addSelectField('out_of_stock');
+
+        // order by out-of-stock last
+        $computedQuantityField = $this->computeFieldName('quantity', $filterToTableMapping);
+        $byOutOfStockLast = 'IFNULL(' . $computedQuantityField . ', 0) <= 0';
+
+        /**
+         * Default behaviour when out of stock
+         * 0 - when deny orders
+         * 1 - when allow orders
+         *
+         * @var int
+         */
+        $isAvailableWhenOutOfStock = (int) Product::isAvailableWhenOutOfStock(2);
+
+        // computing values for order by 'allow to order last'
+        $computedField = $this->computeFieldName('out_of_stock', $filterToTableMapping);
+        $computedValue = $isAvailableWhenOutOfStock ? 0 : 1;
+        $computedDirection = $isAvailableWhenOutOfStock ? 'ASC' : 'DESC';
+
+        // query: products with zero or less quantity and not available to order go to the end
+        $byOOPS = str_replace(
+            [':byOutOfStockLast', ':field', ':value', ':direction'],
+            [$byOutOfStockLast, $computedField, $computedValue, $computedDirection],
+            ':byOutOfStockLast AND FIELD(:field, :value) :direction'
+        );
+
+        $orderField = $byOutOfStockLast . ', '
+            . $byOOPS . ', '
+            . $orderField;
+
+        return $orderField;
+    }
+
+    /**
+     * Add alias to table field name
+     *
+     * @param string $fieldName
+     * @param array $filterToTableMapping
+     *
+     * @return string Table Field name with an alias
+     */
+    protected function computeFieldName($fieldName, $filterToTableMapping, $sortByField = false)
+    {
+        if (array_key_exists($fieldName, $filterToTableMapping)
             && (
                 // If the requested order field is in the result, no need to change tableAlias
                 // unless a fieldName key exists
-                isset($filterToTableMapping[$orderField]['fieldName'])
+                isset($filterToTableMapping[$fieldName]['fieldName'])
                 || $this->getInitialPopulation() === null
-                || !$this->getInitialPopulation()->getSelectFields()->contains($orderField)
+                || !$this->getInitialPopulation()->getSelectFields()->contains($fieldName)
             )
         ) {
-            $joinMapping = $filterToTableMapping[$orderField];
-            $orderField = $joinMapping['tableAlias'] . '.' . (isset($joinMapping['fieldName']) ? $joinMapping['fieldName'] : $orderField);
+            $joinMapping = $filterToTableMapping[$fieldName];
+            $fieldName = $joinMapping['tableAlias'] . '.' . (isset($joinMapping['fieldName']) ? $joinMapping['fieldName'] : $fieldName);
+            if ($sortByField === false) {
+                $fieldName .= isset($joinMapping['fieldAlias']) ? ' as ' . $joinMapping['fieldAlias'] : '';
+            }
+
+            if (isset($joinMapping['aggregateFunction'], $joinMapping['aggregateFieldName'])) {
+                $fieldName = $joinMapping['aggregateFunction'] . '(' . $fieldName . ') as ' . $joinMapping['aggregateFieldName'];
+            }
         } else {
-            $orderField = 'p.' . $orderField;
+            if (strpos($fieldName, '(') === false) {
+                $fieldName = 'p.' . $fieldName;
+            }
         }
 
-        return $orderField;
+        return $fieldName;
     }
 
     /**
@@ -359,24 +432,11 @@ class MySQL extends AbstractAdapter
      *
      * @return array
      */
-    private function computeSelectFields(array $filterToTableMapping)
+    protected function computeSelectFields(array $filterToTableMapping)
     {
         $selectFields = [];
         foreach ($this->getSelectFields() as $key => $selectField) {
-            $selectAlias = 'p';
-            if (array_key_exists($selectField, $filterToTableMapping)) {
-                $joinMapping = $filterToTableMapping[$selectField];
-                $selectAlias = $joinMapping['tableAlias'];
-                if (isset($joinMapping['fieldName'])) {
-                    $selectField = $joinMapping['fieldName'];
-                }
-            }
-
-            if (strpos($selectField, '(') !== false) {
-                $selectFields[] = $selectField;
-            } else {
-                $selectFields[] = $selectAlias . '.' . $selectField;
-            }
+            $selectFields[] = $this->computeFieldName($selectField, $filterToTableMapping);
         }
 
         return $selectFields;
@@ -389,9 +449,10 @@ class MySQL extends AbstractAdapter
      *
      * @return array
      */
-    private function computeWhereConditions(array $filterToTableMapping)
+    protected function computeWhereConditions(array $filterToTableMapping)
     {
         $whereConditions = [];
+        $operationIdx = 0;
         foreach ($this->getOperationsFilters() as $filterName => $filterOperations) {
             $operationsConditions = [];
             foreach ($filterOperations as $operations) {
@@ -403,7 +464,9 @@ class MySQL extends AbstractAdapter
                         $joinMapping = $filterToTableMapping[$operation[0]];
                         // If index is not the first, append to the table alias for
                         // multi join
-                        $selectAlias = $joinMapping['tableAlias'] . ($idx === 0 ? '' : $idx);
+                        $selectAlias = $joinMapping['tableAlias'] .
+                                     ($operationIdx === 0 ? '' : '_' . $operationIdx) .
+                                     ($idx === 0 ? '' : '_' . $idx);
                         $operation[0] = isset($joinMapping['fieldName']) ? $joinMapping['fieldName'] : $operation[0];
                     }
 
@@ -420,7 +483,10 @@ class MySQL extends AbstractAdapter
                 $operationsConditions[] = '(' . implode(' AND ', $conditions) . ')';
             }
 
-            $whereConditions[] = '(' . implode(' OR ', $operationsConditions) . ')';
+            ++$operationIdx;
+            if (!empty($operationsConditions)) {
+                $whereConditions[] = '(' . implode(' OR ', $operationsConditions) . ')';
+            }
         }
 
         foreach ($this->getFilters() as $filterName => $filterContent) {
@@ -502,32 +568,38 @@ class MySQL extends AbstractAdapter
      *
      * @return ArrayCollection
      */
-    private function computeJoinConditions(array $filterToTableMapping)
+    protected function computeJoinConditions(array $filterToTableMapping)
     {
         $joinList = new ArrayCollection();
 
         $this->addJoinList($joinList, $this->getSelectFields(), $filterToTableMapping);
         $this->addJoinList($joinList, $this->getFilters()->getKeys(), $filterToTableMapping);
 
+        $operationIdx = 0;
         foreach ($this->getOperationsFilters() as $filterOperations) {
             foreach ($filterOperations as $operations) {
                 foreach ($operations as $idx => $operation) {
                     if (array_key_exists($operation[0], $filterToTableMapping)) {
                         $joinMapping = $filterToTableMapping[$operation[0]];
-                        if ($idx !== 0) {
+                        if ($idx !== 0 || $operationIdx !== 0) {
                             // Index is not the first, append index to tableAlias on joinCondition
                             $joinMapping['joinCondition'] = preg_replace(
                                 '~([\(\s=]' . $joinMapping['tableAlias'] . ')\.~',
-                                '${1}' . $idx . '.',
+                                '${1}' .
+                                ($operationIdx === 0 ? '' : '_' . $operationIdx) .
+                                ($idx === 0 ? '' : '_' . $idx) .
+                                '.',
                                 $joinMapping['joinCondition']
                             );
-                            $joinMapping['tableAlias'] .= $idx;
+                            $joinMapping['tableAlias'] .= ($operationIdx === 0 ? '' : '_' . $operationIdx) .
+                                ($idx === 0 ? '' : '_' . $idx);
                         }
 
                         $this->addJoinConditions($joinList, $joinMapping, $filterToTableMapping);
                     }
                 }
             }
+            ++$operationIdx;
         }
 
         $this->addJoinList($joinList, $this->getGroupFields()->getKeys(), $filterToTableMapping);
@@ -576,7 +648,7 @@ class MySQL extends AbstractAdapter
             'joinType' => $joinMapping['joinType'],
         ];
 
-        $joinList->set($joinMapping['tableAlias'] . $joinMapping['tableName'], $joinInfos);
+        $joinList->set($joinMapping['tableAlias'] . '_' . $joinMapping['tableName'], $joinInfos);
     }
 
     /**
@@ -589,7 +661,7 @@ class MySQL extends AbstractAdapter
     private function computeGroupByFields(array $filterToTableMapping)
     {
         $groupFields = [];
-        if (empty($this->getGroupFields())) {
+        if ($this->getGroupFields()->isEmpty()) {
             return $groupFields;
         }
 
@@ -634,26 +706,28 @@ class MySQL extends AbstractAdapter
     {
         $mysqlAdapter = $this->getFilteredSearchAdapter();
         $mysqlAdapter->copyFilters($this);
-        $mysqlAdapter->setSelectFields(['COUNT(DISTINCT p.id_product) c']);
-        $mysqlAdapter->setLimit(null);
-        $mysqlAdapter->setOrderField('');
 
-        $result = $mysqlAdapter->execute();
+        $result = $mysqlAdapter->valueCount();
 
-        return isset($result[0]['c']) ? $result[0]['c'] : 0;
+        return isset($result[0]['c']) ? (int) $result[0]['c'] : 0;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function valueCount($fieldName)
+    public function valueCount($fieldName = null)
     {
         $this->resetGroupBy();
-        $this->addGroupBy($fieldName);
-        $this->addSelectField($fieldName);
+        if ($fieldName !== null) {
+            $this->addGroupBy($fieldName);
+            $this->addSelectField($fieldName);
+        }
+
         $this->addSelectField('COUNT(DISTINCT p.id_product) c');
         $this->setLimit(null);
         $this->setOrderField('');
+
+        $this->copyOperationsFilters();
 
         return $this->execute();
     }
@@ -673,6 +747,7 @@ class MySQL extends AbstractAdapter
                 'condition',
                 'weight',
                 'price',
+                'sales',
             ]
         );
         $this->initialPopulation = clone $this;
@@ -694,5 +769,25 @@ class MySQL extends AbstractAdapter
     protected function getDatabase()
     {
         return Db::getInstance();
+    }
+
+    /**
+     * Copy stock management operation filters
+     * to make sure quantity is also used
+     */
+    protected function copyOperationsFilters()
+    {
+        $initialPopulation = $this->getInitialPopulation();
+        if (null === $initialPopulation) {
+            return;
+        }
+
+        $operationsFilters = clone $initialPopulation->getOperationsFilters();
+        foreach ($operationsFilters as $operationName => $operations) {
+            $this->addOperationsFilter(
+                $operationName,
+                $operations
+            );
+        }
     }
 }

@@ -6,7 +6,7 @@
 * you accept the licence agreement.
 *
 * @author    emarketing www.emarketing.com <integrations@emarketing.com>
-* @copyright 2019 easymarketing AG
+* @copyright 2020 emarketing AG
 * @license   https://opensource.org/licenses/GPL-3.0 GNU General Public License version 3
 *}
 
@@ -19,10 +19,21 @@
                         <div class="row">
                             <p style="font-size: 40px; font-weight: bold; margin-top: 55px; margin-bottom: 20px; margin-left: -10px;"><img src="{$module_dir|escape:'html':'UTF-8'}views/img/ps-logo.png" alt="Prestashop Ads" style="width: 440px; height: 110px;" /></p>
                             <p style="margin-bottom: 20px;">
-                                {l s='Sign up to advertise your products to the most interested customers.' mod='emarketing'}
+                                <b>{l s='Welcome to PrestaShop Ads.' mod='emarketing'}</b> {l s='This plugin generates a product data feed for Google Shopping and Facebook / Instagram. Furthermore it generates Conversion Tracking and installs it to your Webshop.' mod='emarketing'}
                             </p>
+                            {if $emptyShopToken}
+                                <p>{l s='Click [1]Sign up[/1] to create your PrestaShop Ads account.' tags=['<b>'] mod='emarketing'}<br>
+                                    {l s='To connect your existing PrestaShop Ads account, click [1]Merge account[/1].' tags=['<b>'] mod='emarketing'}</p>
+                                <p>
+                                    <a href="{$signupUrl|escape:'html':'UTF-8'}" target="_blank" rel="noopener noreferrer" onclick="setTimeout(refresh, 5000);">{l s='Sign up' mod='emarketing'}</a>
+                                    <a href="{$linkUrl|escape:'html':'UTF-8'}" target="_blank" rel="noopener noreferrer" onclick="setTimeout(refresh, 5000);">{l s='Merge account' mod='emarketing'}</a>
+                                </p>
+                            {else}
+                                <p>{l s='Click [1]Login[/1] to log in to your PrestaShop Ads account.' tags=['<b>'] mod='emarketing'}</p>
+                                <p><a href="{$loginUrl|escape:'html':'UTF-8'}" target="_blank" rel="noopener noreferrer">{l s='Login' mod='emarketing'}</a></p>
+                            {/if}
                             <p>
-                                <a href="{$ecom_url|escape:'html':'UTF-8'}" target="_blank" rel="noopener noreferrer">Sign up</a><a href="https://support.emarketing.com/?q=prestashop" target="_blank" class="faqbutton" rel="noopener noreferrer">FAQ</a>
+                                <a href="https://intercom.help/prestashop-ads/" target="_blank" class="faqbutton" rel="noopener noreferrer">FAQ</a>
                             </p>
                         </div>
                     </div>
@@ -102,7 +113,7 @@
     }
     .emarketing_header {
         border-bottom: 1px solid #ccc;
-        height: 300px;
+        height: 435px;
     }
     .emarketing-content {
         margin: 20px 0;
@@ -152,3 +163,10 @@
         }
     }
 </style>
+<script type="application/javascript">
+    function refresh()
+    {
+        location.reload();
+        return false;
+    }
+</script>

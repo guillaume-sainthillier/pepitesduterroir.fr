@@ -1,59 +1,55 @@
 <?php
 /**
- * 2007-2019 PrestaShop.
+ * Copyright since 2007 PrestaShop SA and Contributors
+ * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
  *
  * NOTICE OF LICENSE
  *
  * This source file is subject to the Academic Free License 3.0 (AFL-3.0)
- * that is bundled with this package in the file LICENSE.txt.
+ * that is bundled with this package in the file LICENSE.md.
  * It is also available through the world-wide-web at this URL:
  * https://opensource.org/licenses/AFL-3.0
  * If you did not receive a copy of the license and are unable to
  * obtain it through the world-wide-web, please send an email
  * to license@prestashop.com so we can send you a copy immediately.
  *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade PrestaShop to newer
- * versions in the future. If you wish to customize PrestaShop for your
- * needs please refer to http://www.prestashop.com for more information.
- *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2019 PrestaShop SA
+ * @copyright Since 2007 PrestaShop SA and Contributors
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License 3.0 (AFL-3.0)
- * International Registered Trademark & Property of PrestaShop SA
  */
 
 namespace PrestaShop\Module\FacetedSearch\Product;
 
-use PrestaShop\Module\FacetedSearch\Adapter\MySQL as MySQLAdapter;
-use PrestaShop\Module\FacetedSearch\Adapter\AbstractAdapter;
-use Configuration;
-use Tools;
 use Category;
+use Configuration;
 use Context;
+use PrestaShop\Module\FacetedSearch\Adapter\AbstractAdapter;
+use PrestaShop\Module\FacetedSearch\Adapter\MySQL as MySQLAdapter;
+use Tools;
 
 class Search
 {
-    /**
-     * @var bool
-     */
-    private $psStockManagement;
+    const STOCK_MANAGEMENT_FILTER = 'with_stock_management';
 
     /**
      * @var bool
      */
-    private $psOrderOutOfStock;
+    protected $psStockManagement;
+
+    /**
+     * @var bool
+     */
+    protected $psOrderOutOfStock;
 
     /**
      * @var AbstractAdapter
      */
-    private $searchAdapter;
+    protected $searchAdapter;
 
     /**
      * @var Context
      */
-    private $context;
+    protected $context;
 
     /**
      * Search constructor.
@@ -106,6 +102,11 @@ class Search
 
         $psLayeredFullTree = Configuration::get('PS_LAYERED_FULL_TREE');
         if (!$psLayeredFullTree) {
+            $this->addFilter('id_category', [$parent->id]);
+        }
+
+        $psLayeredFilterByDefaultCategory = Configuration::get('PS_LAYERED_FILTER_BY_DEFAULT_CATEGORY');
+        if ($psLayeredFilterByDefaultCategory) {
             $this->addFilter('id_category_default', [$parent->id]);
         }
 
@@ -135,26 +136,22 @@ class Search
             switch ($key) {
                 case 'id_feature':
                     $operationsFilter = [];
-                    foreach ($filterValues as $filterValue) {
-                        $operationsFilter[] = ['id_feature_value', $filterValue];
+                    foreach ($filterValues as $featureId => $filterValue) {
+                        $this->getSearchAdapter()->addOperationsFilter(
+                            'with_features_' . $featureId,
+                            [[['id_feature_value', $filterValue]]]
+                        );
                     }
-
-                    $this->getSearchAdapter()->addOperationsFilter(
-                        'with_features',
-                        [$operationsFilter]
-                    );
                     break;
 
                 case 'id_attribute_group':
                     $operationsFilter = [];
-                    foreach ($filterValues as $filterValue) {
-                        $operationsFilter[] = ['id_attribute', $filterValue];
+                    foreach ($filterValues as $attributeId => $filterValue) {
+                        $this->getSearchAdapter()->addOperationsFilter(
+                            'with_attributes_' . $attributeId,
+                            [[['id_attribute', $filterValue]]]
+                        );
                     }
-
-                    $this->getSearchAdapter()->addOperationsFilter(
-                        'with_attributes',
-                        [$operationsFilter]
-                    );
                     break;
 
                 case 'category':
@@ -193,7 +190,7 @@ class Search
                     }
 
                     $this->getSearchAdapter()->addOperationsFilter(
-                        'with_stock_management',
+                        self::STOCK_MANAGEMENT_FILTER,
                         $operationsFilter
                     );
                     break;

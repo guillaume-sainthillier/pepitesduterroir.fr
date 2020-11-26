@@ -1,6 +1,24 @@
 <?php
+/**
+ * 2007-2020 PrestaShop and Contributors
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Academic Free License 3.0 (AFL-3.0)
+ * that is bundled with this package in the file LICENSE.txt.
+ * It is also available through the world-wide-web at this URL:
+ * https://opensource.org/licenses/AFL-3.0
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to license@prestashop.com so we can send you a copy immediately.
+ *
+ * @author    PrestaShop SA <contact@prestashop.com>
+ * @copyright 2007-2020 PrestaShop SA and Contributors
+ * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License 3.0 (AFL-3.0)
+ * International Registered Trademark & Property of PrestaShop SA
+ */
 global $_MODULE;
-$_MODULE = array();
+$_MODULE = [];
 $_MODULE['<{psgdpr}prestashop>psgdpr_5966265f35dd87febf4d59029bc9ef66'] = 'Offizielles Modul zur DSGVO-Compliance';
 $_MODULE['<{psgdpr}prestashop>psgdpr_dbf90f78fc135d723570a4a43041a3dc'] = 'Mit diesem von PrestaShop entwickelten Modul erfüllen Sie die wichtigsten Anforderungen der Europäischen Datenschutz-Grundverordnung.';
 $_MODULE['<{psgdpr}prestashop>psgdpr_bb8956c67b82c7444a80c6b2433dd8b4'] = 'Sind Sie sicher, dass Sie dieses Modul deinstallieren wollen?';
@@ -19,9 +37,7 @@ $_MODULE['<{psgdpr}prestashop>customerpersonaldata17_91a49c1d45a5d37e85658d01b6f
 $_MODULE['<{psgdpr}prestashop>customerpersonaldata17_01cb324ae91e9bd16213cc2945334249'] = 'Sie haben das Recht, alle persönlichen Informationen auf der Seite „Mein Konto“ zu ändern. Bitte kontaktieren Sie uns für jede andere Anfrage bezüglich der Berichtigung und/oder Löschung Ihrer persönlichen Daten über unsere';
 $_MODULE['<{psgdpr}prestashop>customerpersonaldata17_af5efea250326c1c34d69aa9364b482c'] = 'Kontaktseite.';
 $_MODULE['<{psgdpr}prestashop>customerpersonaldata17_332087a4991d8bc866abd3fd78a2e514'] = 'Wir werden Ihre Anfrage überprüfen und so schnell wie möglich auf Sie zurückkommen.';
-$_MODULE['<{psgdpr}prestashop>customeraccount_c654dacdea4ad6f75ad36553a8a947cd'] = 'Meine persönlichen Daten';
-$_MODULE['<{psgdpr}prestashop>customeraccount_c654dacdea4ad6f75ad36553a8a947cd'] = 'Meine persönlichen Daten';
-$_MODULE['<{psgdpr}prestashop>customeraccount_c654dacdea4ad6f75ad36553a8a947cd'] = 'Meine persönlichen Daten';
+$_MODULE['<{psgdpr}prestashop>customeraccount_5868129c4526891dddb05b8e59c33572'] = 'Meine persönlichen Daten';
 $_MODULE['<{psgdpr}prestashop>customerpersonaldata16_d95cf4ab2cbf1dfb63f066b50558b07d'] = 'Mein Konto';
 $_MODULE['<{psgdpr}prestashop>customerpersonaldata16_c654dacdea4ad6f75ad36553a8a947cd'] = 'Meine persönlichen Daten';
 $_MODULE['<{psgdpr}prestashop>customerpersonaldata16_c654dacdea4ad6f75ad36553a8a947cd'] = 'Meine persönlichen Daten';
