@@ -7,11 +7,13 @@
 * you accept the licence agreement.
 *
 * @author    emarketing www.emarketing.com <integrations@emarketing.com>
-* @copyright 2019 easymarketing AG
+* @copyright 2020 emarketing AG
 * @license   https://opensource.org/licenses/GPL-3.0 GNU General Public License version 3
 */
 
 namespace Emarketing\Service\Products;
+
+use Emarketing\Service\Products\PriceCalculation;
 
 /**
 * Class Variants
@@ -19,6 +21,11 @@ namespace Emarketing\Service\Products;
 */
 class Variants
 {
+    /**
+     * @var PriceCalculation
+     */
+    private $priceCalculation;
+
     /**
      * @var \Context
      */
@@ -29,16 +36,18 @@ class Variants
      */
     public function __construct()
     {
+        $this->priceCalculation = new PriceCalculation();
         $this->context = \Context::getContext();
     }
 
     /**
      * @param \Product $psProduct
      * @param $idLang
+     * @param $idCurrency
      * @return mixed
      * @throws \PrestaShopException
      */
-    public function buildVariantInformation($psProduct, $idLang)
+    public function buildVariantInformation($psProduct, $idLang, $idCurrency)
     {
         $variants = $psProduct->getAttributesResume($idLang);
 
@@ -55,6 +64,9 @@ class Variants
             );
 
             $variants[$variantKey]['availability'] = $psProduct->checkQty(1);
+
+            $variants[$variantKey]['plugin_price'] = $this->priceCalculation->getFinalPrice($idCurrency, $psProduct->id, false, $variant['id_product_attribute']);
+            $variants[$variantKey]['plugin_sale_price'] = $this->priceCalculation->getFinalPrice($idCurrency, $psProduct->id, true, $variant['id_product_attribute']);
         }
 
         return $variants;
@@ -69,7 +81,7 @@ class Variants
      */
     private function getUrl($idProduct, $idLang, $idVariant)
     {
-        $url = $this->context->link->getProductLink(
+        return $this->context->link->getProductLink(
             $idProduct,
             null,
             null,
@@ -78,7 +90,5 @@ class Variants
             null,
             $idVariant
         );
-
-        return $url;
     }
 }

@@ -1,10 +1,11 @@
 {**
- * 2007-2020 PrestaShop and Contributors
+ * Copyright since 2007 PrestaShop SA and Contributors
+ * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
  *
  * NOTICE OF LICENSE
  *
  * This source file is subject to the Academic Free License 3.0 (AFL-3.0)
- * that is bundled with this package in the file LICENSE.txt.
+ * that is bundled with this package in the file LICENSE.md.
  * It is also available through the world-wide-web at this URL:
  * https://opensource.org/licenses/AFL-3.0
  * If you did not receive a copy of the license and are unable to
@@ -12,15 +13,14 @@
  * to license@prestashop.com so we can send you a copy immediately.
  *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2020 PrestaShop SA and Contributors
+ * @copyright Since 2007 PrestaShop SA and Contributors
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License 3.0 (AFL-3.0)
- * International Registered Trademark & Property of PrestaShop SA
  *}
 
-<link rel="preload" href="https://www.paypal.com/sdk/js?components=buttons&client-id={$paypalClientId|escape:'htmlall':'UTF-8'}&merchant-id={$merchantId|escape:'htmlall':'UTF-8'}&intent={$intent|escape:'htmlall':'UTF-8'}&currency={$currencyIsoCode|escape:'htmlall':'UTF-8'}&locale={$locale|escape:'htmlall':'UTF-8'}" as="script">
+<link rel="preload" href="{$paypalSdkLink|escape:'javascript':'UTF-8'|replace:'&amp;':'&'}" as="script">
 
 {capture name=path}
-<a href="{$link->getPageLink('order', true, NULL, "step=3")|escape:'html':'UTF-8'}" title="{l s='Go back to the Checkout' mod='ps_checkout'}">
+<a href="{$link->getPageLink('order', true, NULL, 'step=3')|escape:'html':'UTF-8'}" title="{l s='Go back to the Checkout' mod='ps_checkout'}">
   {l s='Checkout' mod='ps_checkout'}
 </a>
 <span class="navigation-pipe">
@@ -61,51 +61,45 @@
     <p>
       - {l s='Please confirm your order by clicking on the method you want to pay with.' mod='ps_checkout'}
     </p>
-
+    <div id="paypal-button-container" style="width: 300px; margin-top: 20px;"></div>
   </div>
 
   <div class="cart_navigation clearfix" id="cart_navigation">
     <div class="flex-display">
-      <a class="button-exclusive btn btn-default" href="{$link->getPageLink('order', true, NULL, "step=3")|escape:'html':'UTF-8'}">
+      <a class="button-exclusive btn btn-default" href="{$link->getPageLink('order', true, NULL, 'step=3')|escape:'html':'UTF-8'}">
         <i class="icon-chevron-left"></i>{l s='Other payment methods' mod='ps_checkout'}
       </a>
-    </div>
-    <div id="paypal-button-container">
     </div>
   </div>
 </form>
 {/if}
 
 <script>
-/**
- * Create paypal script
- */
-function initPaypalScript() {
-  if (typeof paypalSdkPsCheckout !== 'undefined') {
-    return;
+  const paypalOrderId = "{$paypalOrderId|escape:'javascript':'UTF-8'}";
+  const validateOrderLinkByPaypal = "{$validateOrderLinkByPaypal|escape:'javascript':'UTF-8'|replace:'&amp;':'&' nofilter}";
+  /**
+   * Create paypal script
+   */
+  function initPaypalScript() {
+    if (typeof paypalSdkPsCheckout !== 'undefined') {
+      return;
+    }
+
+    let psCheckoutScript = document.getElementById('paypalSdkPsCheckout');
+
+    if (null !== psCheckoutScript) {
+      return;
+    }
+
+    const paypalScript = document.createElement('script');
+    paypalScript.setAttribute('src', "{$paypalSdkLink|escape:'javascript':'UTF-8'|replace:'&amp;':'&' nofilter}");
+    paypalScript.setAttribute('data-client-token', "{$clientToken|escape:'javascript':'UTF-8'}");
+    paypalScript.setAttribute('id', 'psCheckoutPaypalSdk');
+    paypalScript.setAttribute('data-namespace', 'paypalSdkPsCheckout');
+    paypalScript.setAttribute('data-enable-3ds', '');
+    paypalScript.setAttribute('async', '');
+    document.head.appendChild(paypalScript);
   }
 
-  let psCheckoutScript = document.getElementById('paypalSdkPsCheckout');
-
-  if (psCheckoutScript !== null) {
-    return;
-  }
-
-  const paypalScript = document.createElement('script');
-  paypalScript.setAttribute('src', "https://www.paypal.com/sdk/js?components=buttons&client-id={$paypalClientId|escape:'htmlall':'UTF-8'}&merchant-id={$merchantId|escape:'htmlall':'UTF-8'}&intent={$intent|escape:'htmlall':'UTF-8'}&currency={$currencyIsoCode|escape:'htmlall':'UTF-8'}&locale={$locale|escape:'htmlall':'UTF-8'}");
-  paypalScript.setAttribute('data-client-token', "{$clientToken|escape:'htmlall':'UTF-8'}");
-  paypalScript.setAttribute('id', 'psCheckoutPaypalSdk');
-  paypalScript.setAttribute('data-namespace', 'paypalSdkPsCheckout');
-  paypalScript.setAttribute('async', '');
-  document.head.appendChild(paypalScript);
-}
-
-initPaypalScript();
+  initPaypalScript();
 </script>
-
-{literal}
-<script type="text/javascript">
-  var paypalOrderId = "{/literal}{$paypalOrderId|escape:'javascript':'UTF-8'}{literal}";
-  var validateOrderLinkByPaypal = "{/literal}{$validateOrderLinkByPaypal|escape:'javascript':'UTF-8'}{literal}";
-</script>
-{/literal}

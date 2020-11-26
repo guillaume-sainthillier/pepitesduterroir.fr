@@ -1,47 +1,42 @@
 <?php
 /**
- * 2007-2019 PrestaShop.
+ * Copyright since 2007 PrestaShop SA and Contributors
+ * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
  *
  * NOTICE OF LICENSE
  *
  * This source file is subject to the Academic Free License 3.0 (AFL-3.0)
- * that is bundled with this package in the file LICENSE.txt.
+ * that is bundled with this package in the file LICENSE.md.
  * It is also available through the world-wide-web at this URL:
  * https://opensource.org/licenses/AFL-3.0
  * If you did not receive a copy of the license and are unable to
  * obtain it through the world-wide-web, please send an email
  * to license@prestashop.com so we can send you a copy immediately.
  *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade PrestaShop to newer
- * versions in the future. If you wish to customize PrestaShop for your
- * needs please refer to http://www.prestashop.com for more information.
- *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2019 PrestaShop SA
+ * @copyright Since 2007 PrestaShop SA and Contributors
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License 3.0 (AFL-3.0)
- * International Registered Trademark & Property of PrestaShop SA
  */
 
 namespace PrestaShop\Module\FacetedSearch\Tests\Product;
 
-use Ps_Facetedsearch;
-use Tools;
-use Db;
 use Configuration;
 use Context;
+use Db;
 use Mockery;
 use Mockery\Adapter\Phpunit\MockeryTestCase;
 use PrestaShop\Module\FacetedSearch\Filters\Converter;
-use PrestaShop\Module\FacetedSearch\URLSerializer;
 use PrestaShop\Module\FacetedSearch\Product\SearchProvider;
-use PrestaShop\PrestaShop\Core\Product\Search\SortOrder;
+use PrestaShop\Module\FacetedSearch\URLSerializer;
+use PrestaShop\PrestaShop\Core\Product\Search\Facet;
+use PrestaShop\PrestaShop\Core\Product\Search\FacetCollection;
+use PrestaShop\PrestaShop\Core\Product\Search\Filter;
 use PrestaShop\PrestaShop\Core\Product\Search\ProductSearchContext;
 use PrestaShop\PrestaShop\Core\Product\Search\ProductSearchResult;
-use PrestaShop\PrestaShop\Core\Product\Search\FacetCollection;
-use PrestaShop\PrestaShop\Core\Product\Search\Facet;
-use PrestaShop\PrestaShop\Core\Product\Search\Filter;
+use PrestaShop\PrestaShop\Core\Product\Search\SortOrder;
+use Ps_Facetedsearch;
+use Smarty;
+use Tools;
 
 class SearchProviderTest extends MockeryTestCase
 {
@@ -75,7 +70,7 @@ class SearchProviderTest extends MockeryTestCase
      */
     private $module;
 
-    private function mockFacet($label, $data = ['filters' => []])
+    private function mockFacet($label, $data = ['filters' => []], $widgetType = 'checkbox')
     {
         $facet = Mockery::mock(Facet::class);
         $facet->shouldReceive('getLabel')
@@ -83,6 +78,9 @@ class SearchProviderTest extends MockeryTestCase
 
         $facet->shouldReceive('toArray')
             ->andReturn($data);
+
+        $facet->shouldReceive('getWidgetType')
+            ->andReturn($widgetType);
 
         return $facet;
     }
@@ -153,7 +151,7 @@ class SearchProviderTest extends MockeryTestCase
 
     public function testRenderFacetsWithoutFacetsCollection()
     {
-        $context = Mockery::mock(ProductSearchContext::class);
+        $productContext = Mockery::mock(ProductSearchContext::class);
         $productSearchResult = Mockery::mock(ProductSearchResult::class);
         $productSearchResult->shouldReceive('getFacetCollection')
             ->once()
@@ -162,7 +160,7 @@ class SearchProviderTest extends MockeryTestCase
         $this->assertEquals(
             '',
             $this->provider->renderFacets(
-                $context,
+                $productContext,
                 $productSearchResult
             )
         );
@@ -170,7 +168,26 @@ class SearchProviderTest extends MockeryTestCase
 
     public function testRenderFacetsWithFacetsCollection()
     {
-        $context = Mockery::mock(ProductSearchContext::class);
+        $productContext = Mockery::mock(ProductSearchContext::class);
+        $smarty = Mockery::mock(Smarty::class);
+        $smarty->shouldReceive('assign')
+            ->once()
+            ->with(
+                [
+                    'show_quantities' => true,
+                    'facets' => [
+                        [
+                            'filters' => [],
+                        ],
+                    ],
+                    'js_enabled' => true,
+                    'displayedFacets' => [],
+                    'activeFilters' => [],
+                    'sort_order' => 'product.position.asc',
+                    'clear_all_link' => 'http://shop.prestashop.com/catalog?from=scratch',
+                ]
+            );
+        $this->context->smarty = $smarty;
         $sortOrder = Mockery::mock(SortOrder::class);
         $sortOrder->shouldReceive('toString')
             ->once()
@@ -192,30 +209,17 @@ class SearchProviderTest extends MockeryTestCase
                 ]
             );
 
-        $this->module->shouldReceive('render')
+        $this->module->shouldReceive('fetch')
             ->once()
             ->with(
-                'views/templates/front/catalog/facets.tpl',
-                [
-                    'show_quantities' => true,
-                    'facets' => [
-                        [
-                            'filters' => [],
-                        ],
-                    ],
-                    'js_enabled' => true,
-                    'displayedFacets' => [],
-                    'activeFilters' => [],
-                    'sort_order' => 'product.position.asc',
-                    'clear_all_link' => 'http://shop.prestashop.com/catalog?from=scratch',
-                ]
+                'module:ps_facetedsearch/views/templates/front/catalog/facets.tpl'
             )
             ->andReturn('');
 
         $this->assertEquals(
             '',
             $this->provider->renderFacets(
-                $context,
+                $productContext,
                 $productSearchResult
             )
         );
@@ -223,7 +227,109 @@ class SearchProviderTest extends MockeryTestCase
 
     public function testRenderFacetsWithFacetsCollectionAndFilters()
     {
-        $context = Mockery::mock(ProductSearchContext::class);
+        $productContext = Mockery::mock(ProductSearchContext::class);
+        $smarty = Mockery::mock(Smarty::class);
+        $smarty->shouldReceive('assign')
+            ->once()
+            ->with(
+                [
+                    'show_quantities' => true,
+                    'facets' => [
+                        [
+                            'displayed' => true,
+                            'filters' => [
+                                [
+                                    'label' => 'Men',
+                                    'type' => 'category',
+                                    'nextEncodedFacets' => 'Categories-Men',
+                                    'active' => false,
+                                    'facetLabel' => 'Test',
+                                    'nextEncodedFacetsURL' => 'http://shop.prestashop.com/catalog?from=scratch&q=Categories-Men',
+                                ],
+                                [
+                                    'label' => 'Women',
+                                    'type' => 'category',
+                                    'nextEncodedFacets' => '',
+                                    'active' => true,
+                                    'facetLabel' => 'Test',
+                                    'nextEncodedFacetsURL' => 'http://shop.prestashop.com/catalog?from=scratch&page=1',
+                                ],
+                            ],
+                        ],
+                        [
+                            'displayed' => true,
+                            'filters' => [
+                                [
+                                    'label' => '£22.00 - £35.00',
+                                    'type' => 'price',
+                                    'active' => false,
+                                    'displayed' => true,
+                                    'properties' => [],
+                                    'magnitude' => 2,
+                                    'value' => 0,
+                                    'nextEncodedFacets' => '',
+                                    'facetLabel' => 'Price',
+                                    'nextEncodedFacetsURL' => 'http://shop.prestashop.com/catalog?from=scratch',
+                                ],
+                            ],
+                        ],
+                    ],
+                    'js_enabled' => true,
+                    'displayedFacets' => [
+                        [
+                            'displayed' => true,
+                            'filters' => [
+                                [
+                                    'label' => 'Men',
+                                    'type' => 'category',
+                                    'nextEncodedFacets' => 'Categories-Men',
+                                    'active' => false,
+                                    'facetLabel' => 'Test',
+                                    'nextEncodedFacetsURL' => 'http://shop.prestashop.com/catalog?from=scratch&q=Categories-Men',
+                                ],
+                                [
+                                    'label' => 'Women',
+                                    'type' => 'category',
+                                    'nextEncodedFacets' => '',
+                                    'active' => true,
+                                    'facetLabel' => 'Test',
+                                    'nextEncodedFacetsURL' => 'http://shop.prestashop.com/catalog?from=scratch&page=1',
+                                ],
+                            ],
+                        ],
+                        [
+                            'displayed' => true,
+                            'filters' => [
+                                [
+                                    'label' => '£22.00 - £35.00',
+                                    'type' => 'price',
+                                    'active' => false,
+                                    'displayed' => true,
+                                    'properties' => [],
+                                    'magnitude' => 2,
+                                    'value' => 0,
+                                    'nextEncodedFacets' => '',
+                                    'facetLabel' => 'Price',
+                                    'nextEncodedFacetsURL' => 'http://shop.prestashop.com/catalog?from=scratch',
+                                ],
+                            ],
+                        ],
+                    ],
+                    'activeFilters' => [
+                        [
+                            'label' => 'Women',
+                            'type' => 'category',
+                            'nextEncodedFacets' => '',
+                            'active' => true,
+                            'facetLabel' => 'Test',
+                            'nextEncodedFacetsURL' => 'http://shop.prestashop.com/catalog?from=scratch&page=1',
+                        ],
+                    ],
+                    'sort_order' => 'product.position.asc',
+                    'clear_all_link' => 'http://shop.prestashop.com/catalog?from=scratch',
+                ]
+            );
+        $this->context->smarty = $smarty;
         $sortOrder = Mockery::mock(SortOrder::class);
         $sortOrder->shouldReceive('toString')
             ->once()
@@ -256,87 +362,45 @@ class SearchProviderTest extends MockeryTestCase
                 ],
             ]
         );
+        $facetSlider = $this->mockFacet(
+            'Price',
+            [
+                'displayed' => true,
+                'filters' => [
+                    [
+                        'label' => '£22.00 - £35.00',
+                        'type' => 'price',
+                        'active' => false,
+                        'displayed' => true,
+                        'properties' => [],
+                        'magnitude' => 2,
+                        'value' => 0,
+                        'nextEncodedFacets' => '',
+                    ],
+                ],
+            ],
+            'slider'
+        );
         $this->facetCollection->shouldReceive('getFacets')
             ->once()
             ->andReturn(
                 [
                     $facet,
+                    $facetSlider,
                 ]
             );
 
-        $this->module->shouldReceive('render')
+        $this->module->shouldReceive('fetch')
             ->once()
             ->with(
-                'views/templates/front/catalog/facets.tpl',
-                [
-                    'show_quantities' => true,
-                    'facets' => [
-                        [
-                            'displayed' => true,
-                            'filters' => [
-                                [
-                                    'label' => 'Men',
-                                    'type' => 'category',
-                                    'nextEncodedFacets' => 'Categories-Men',
-                                    'active' => false,
-                                    'facetLabel' => 'Test',
-                                    'nextEncodedFacetsURL' => 'http://shop.prestashop.com/catalog?from=scratch&q=Categories-Men',
-                                ],
-                                [
-                                    'label' => 'Women',
-                                    'type' => 'category',
-                                    'nextEncodedFacets' => '',
-                                    'active' => true,
-                                    'facetLabel' => 'Test',
-                                    'nextEncodedFacetsURL' => 'http://shop.prestashop.com/catalog?from=scratch&page=1',
-                                ],
-                            ],
-                        ],
-                    ],
-                    'js_enabled' => true,
-                    'displayedFacets' => [
-                        [
-                            'displayed' => true,
-                            'filters' => [
-                                [
-                                    'label' => 'Men',
-                                    'type' => 'category',
-                                    'nextEncodedFacets' => 'Categories-Men',
-                                    'active' => false,
-                                    'facetLabel' => 'Test',
-                                    'nextEncodedFacetsURL' => 'http://shop.prestashop.com/catalog?from=scratch&q=Categories-Men',
-                                ],
-                                [
-                                    'label' => 'Women',
-                                    'type' => 'category',
-                                    'nextEncodedFacets' => '',
-                                    'active' => true,
-                                    'facetLabel' => 'Test',
-                                    'nextEncodedFacetsURL' => 'http://shop.prestashop.com/catalog?from=scratch&page=1',
-                                ],
-                            ],
-                        ],
-                    ],
-                    'activeFilters' => [
-                        [
-                            'label' => 'Women',
-                            'type' => 'category',
-                            'nextEncodedFacets' => '',
-                            'active' => true,
-                            'facetLabel' => 'Test',
-                            'nextEncodedFacetsURL' => 'http://shop.prestashop.com/catalog?from=scratch&page=1',
-                        ],
-                    ],
-                    'sort_order' => 'product.position.asc',
-                    'clear_all_link' => 'http://shop.prestashop.com/catalog?from=scratch',
-                ]
+                'module:ps_facetedsearch/views/templates/front/catalog/facets.tpl'
             )
             ->andReturn('');
 
         $this->assertEquals(
             '',
             $this->provider->renderFacets(
-                $context,
+                $productContext,
                 $productSearchResult
             )
         );

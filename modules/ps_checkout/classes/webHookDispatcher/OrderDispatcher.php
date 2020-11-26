@@ -20,6 +20,9 @@
 
 namespace PrestaShop\Module\PrestashopCheckout;
 
+use PrestaShop\Module\PrestashopCheckout\Exception\PsCheckoutException;
+use PrestaShop\Module\PrestashopCheckout\Presenter\Date\DatePresenter;
+
 class OrderDispatcher implements Dispatcher
 {
     const PS_CHECKOUT_PAYMENT_REVERSED = 'PaymentCaptureReversed';
@@ -30,27 +33,13 @@ class OrderDispatcher implements Dispatcher
     const PS_CHECKOUT_PAYMENT_DENIED = 'PaymentCaptureDenied';
 
     /**
-     * @var array
-     */
-    private $matriceEventAndOrderState;
-
-    /**
-     * OrderDispatcher constructor.
-     */
-    public function __construct()
-    {
-        $this->matriceEventAndOrderState = [
-            self::PS_CHECKOUT_PAYMENT_AUTH_VOIDED => \Configuration::get('PS_OS_CANCELED'),
-            self::PS_CHECKOUT_PAYMENT_PENDING => \Configuration::get('PS_CHECKOUT_STATE_WAITING_PAYPAL_PAYMENT'), // OS_PREPARATION should be used only before shipping !
-            self::PS_CHECKOUT_PAYMENT_COMPLETED => \Configuration::get('PS_OS_PAYMENT'), // Payment accepted
-            self::PS_CHECKOUT_PAYMENT_DENIED => \Configuration::get('PS_OS_ERROR'), // Payment error
-        ];
-    }
-
-    /**
      * Dispatch the Event Type to manage the merchant status
      *
      * {@inheritdoc}
+     *
+     * @throws PsCheckoutException
+     * @throws \PrestaShopDatabaseException
+     * @throws \PrestaShopException
      */
     public function dispatchEventType($payload)
     {
@@ -61,14 +50,14 @@ class OrderDispatcher implements Dispatcher
         }
 
         if ($payload['eventType'] === self::PS_CHECKOUT_PAYMENT_REFUNED
-        || $payload['eventType'] === self::PS_CHECKOUT_PAYMENT_REVERSED) {
+            || $payload['eventType'] === self::PS_CHECKOUT_PAYMENT_REVERSED) {
             return $this->dispatchPaymentAction($payload['eventType'], $payload['resource'], $psOrderId);
         }
 
         if ($payload['eventType'] === self::PS_CHECKOUT_PAYMENT_COMPLETED
-        || $payload['eventType'] === self::PS_CHECKOUT_PAYMENT_DENIED
-        || $payload['eventType'] === self::PS_CHECKOUT_PAYMENT_AUTH_VOIDED) {
-            return $this->dispatchPaymentStatus($payload['eventType'], $psOrderId);
+            || $payload['eventType'] === self::PS_CHECKOUT_PAYMENT_DENIED
+            || $payload['eventType'] === self::PS_CHECKOUT_PAYMENT_AUTH_VOIDED) {
+            return $this->dispatchPaymentStatus($payload['eventType'], $payload['resource'], $psOrderId);
         }
 
         // For now, if pending, do not change anything
@@ -85,19 +74,17 @@ class OrderDispatcher implements Dispatcher
      * @param string $orderId paypal order id
      *
      * @return bool|int
+     *
+     * @throws PsCheckoutException
      */
     private function getPrestashopOrderId($orderId)
     {
-        $orderError = (new WebHookValidation())->validateRefundOrderIdValue($orderId);
-
-        if (!empty($orderError)) {
-            throw new UnauthorizedException($orderError);
-        }
+        (new WebHookValidation())->validateRefundOrderIdValue($orderId);
 
         $psOrderId = (new \OrderMatrice())->getOrderPrestashopFromPaypal($orderId);
 
         if (!$psOrderId) {
-            throw new UnprocessableException('order #' . $orderId . ' does not exist');
+            throw new PsCheckoutException(sprintf('order #%s does not exist', $orderId), PsCheckoutException::PRESTASHOP_ORDER_NOT_FOUND);
         }
 
         return $psOrderId;
@@ -111,64 +98,156 @@ class OrderDispatcher implements Dispatcher
      * @param int $orderId
      *
      * @return bool
+     *
+     * @throws PsCheckoutException
      */
     private function dispatchPaymentAction($eventType, $resource, $orderId)
     {
-        $orderError = (new WebHookValidation())->validateRefundResourceValues($resource);
+        (new WebHookValidation())->validateRefundResourceValues($resource);
 
-        if (!empty($orderError)) {
-            throw new UnauthorizedException($orderError);
-        }
+        return true;
 
-        $initiateBy = 'Merchant';
-
-        if ($eventType === self::PS_CHECKOUT_PAYMENT_REVERSED) {
-            $initiateBy = 'Paypal';
-        }
-
-        return (new WebHookOrder($initiateBy, $resource, $orderId))->updateOrder();
+//        $initiateBy = 'Merchant';
+//
+//        if ($eventType === self::PS_CHECKOUT_PAYMENT_REVERSED) {
+//            $initiateBy = 'Paypal';
+//        }
+//
+//        return (new WebHookOrder($initiateBy, $resource, $orderId))->updateOrder();
     }
 
     /**
      * Dispatch the event Type the the payment status PENDING / COMPLETED / DENIED / AUTH_VOIDED
      *
      * @param string $eventType
+     * @param array $resource
      * @param int $orderId
      *
      * @return bool
+     *
+     * @throws PsCheckoutException
+     * @throws \PrestaShopDatabaseException
+     * @throws \PrestaShopException
      */
-    private function dispatchPaymentStatus($eventType, $orderId)
+    private function dispatchPaymentStatus($eventType, $resource, $orderId)
     {
-        $orderError = (new WebHookValidation())->validateRefundOrderIdValue($orderId);
-
-        if (!empty($orderError)) {
-            throw new UnauthorizedException($orderError);
-        }
+        (new WebHookValidation())->validateRefundOrderIdValue($orderId);
 
         $order = new \Order($orderId);
-        $lastOrderStateId = (int) $order->getCurrentState();
-        $newOrderStateId = (int) $this->matriceEventAndOrderState[$eventType];
+        $currentOrderStateId = (int) $order->getCurrentState();
+        $newOrderStateId = (int) $this->getNewState($eventType, $resource, $currentOrderStateId);
 
         // Prevent duplicate state entry
-        if ($lastOrderStateId === $newOrderStateId
-            || $order->hasBeenPaid()
-            || $order->hasBeenShipped()
-            || $order->hasBeenDelivered()
-            || $order->isInPreparation()) {
-            return false;
+        if ($currentOrderStateId !== $newOrderStateId
+            && false === (bool) $order->hasBeenPaid()
+            && false === (bool) $order->hasBeenShipped()
+            && false === (bool) $order->hasBeenDelivered()
+            && false === (bool) $order->isInPreparation()
+        ) {
+            $orderHistory = new \OrderHistory();
+            $orderHistory->id_order = $orderId;
+            $orderHistory->changeIdOrderState(
+                $newOrderStateId,
+                $orderId
+            );
+            $orderHistory->addWithemail();
         }
 
-        $orderHistory = new \OrderHistory();
-        $orderHistory->id_order = $orderId;
-        $orderHistory->changeIdOrderState(
-            $this->matriceEventAndOrderState[$eventType],
-            $orderId
-        );
+        $orderPaymentCollection = $order->getOrderPaymentCollection();
+        $orderPaymentCollection->where('amount', '=', $resource['amount']['value']);
+        $shouldAddOrderPayment = true;
 
-        if (true !== $orderHistory->addWithemail()) {
-            throw new UnauthorizedException('unable to change the order state');
+        /** @var \OrderPayment[] $orderPayments */
+        $orderPayments = $orderPaymentCollection->getAll();
+        foreach ($orderPayments as $orderPayment) {
+            if (\Validate::isLoadedObject($orderPayment)) {
+                if ($orderPayment->transaction_id !== $resource['id']) {
+                    $orderPayment->transaction_id = $resource['id'];
+                    $orderPayment->payment_method = $this->getPaymentMessageTranslation($resource);
+                    $orderPayment->save();
+                }
+                $shouldAddOrderPayment = false;
+            }
+        }
+
+        if (true === $shouldAddOrderPayment) {
+            $order->addOrderPayment(
+                $resource['amount']['value'],
+                $this->getPaymentMessageTranslation($resource),
+                $resource['id'],
+                \Currency::getCurrencyInstance(\Currency::getIdByIsoCode($resource['amount']['currency_code'])),
+                (new DatePresenter($resource['create_time'], 'Y-m-d H:i:s'))->present()
+            );
         }
 
         return true;
+    }
+
+    /**
+     * @param string $eventType
+     * @param array $resource
+     * @param int $currentOrderStateId
+     *
+     * @return int
+     */
+    private function getNewState($eventType, $resource, $currentOrderStateId)
+    {
+        if (static::PS_CHECKOUT_PAYMENT_AUTH_VOIDED === $eventType) {
+            return (int) \Configuration::getGlobalValue('PS_OS_CANCELED');
+        }
+
+        if (static::PS_CHECKOUT_PAYMENT_COMPLETED === $eventType) {
+            return $this->getPaidStatusId($currentOrderStateId);
+        }
+
+        if (static::PS_CHECKOUT_PAYMENT_DENIED === $eventType) {
+            return (int) \Configuration::getGlobalValue('PS_OS_ERROR');
+        }
+
+        return $this->getPendingStatusId($resource);
+    }
+
+    /**
+     * @param int $currentOrderStateId Current OrderState identifier
+     *
+     * @return int OrderState paid identifier
+     */
+    private function getPaidStatusId($currentOrderStateId)
+    {
+        if ($currentOrderStateId === (int) \Configuration::getGlobalValue('PS_OS_OUTOFSTOCK_UNPAID')) {
+            return (int) \Configuration::getGlobalValue('PS_OS_OUTOFSTOCK_PAID');
+        }
+
+        return (int) \Configuration::getGlobalValue('PS_OS_PAYMENT');
+    }
+
+    /**
+     * @param array $resource
+     *
+     * @return int OrderState identifier
+     */
+    private function getPendingStatusId($resource)
+    {
+        if (isset($resource['processor_response']['avs_code'])) {
+            return (int) \Configuration::getGlobalValue('PS_CHECKOUT_STATE_WAITING_CREDIT_CARD_PAYMENT');
+        }
+
+        return (int) \Configuration::getGlobalValue('PS_CHECKOUT_STATE_WAITING_PAYPAL_PAYMENT');
+    }
+
+    /**
+     * @param array $resource
+     *
+     * @return string
+     */
+    private function getPaymentMessageTranslation(array $resource)
+    {
+        $module = \Module::getInstanceByName('ps_checkout');
+
+        if (isset($resource['processor_response']['avs_code'])) {
+            return $module->l('Payment by card');
+        }
+
+        return $module->l('Payment by PayPal');
     }
 }

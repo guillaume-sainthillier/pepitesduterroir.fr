@@ -1,26 +1,20 @@
 /**
- * 2007-2019 PrestaShop.
+ * Copyright since 2007 PrestaShop SA and Contributors
+ * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
  *
  * NOTICE OF LICENSE
  *
  * This source file is subject to the Academic Free License 3.0 (AFL-3.0)
- * that is bundled with this package in the file LICENSE.txt.
+ * that is bundled with this package in the file LICENSE.md.
  * It is also available through the world-wide-web at this URL:
  * https://opensource.org/licenses/AFL-3.0
  * If you did not receive a copy of the license and are unable to
  * obtain it through the world-wide-web, please send an email
  * to license@prestashop.com so we can send you a copy immediately.
  *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade PrestaShop to newer
- * versions in the future. If you wish to customize PrestaShop for your
- * needs please refer to http://www.prestashop.com for more information.
- *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2019 PrestaShop SA
+ * @copyright Since 2007 PrestaShop SA and Contributors
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License 3.0 (AFL-3.0)
- * International Registered Trademark & Property of PrestaShop SA
  */
 /**
  * These placeholders are used in CLDR number formatting templates.
@@ -29,6 +23,8 @@
 import NumberSymbol from './number-symbol';
 import PriceSpecification from './specifications/price';
 import NumberSpecification from './specifications/number';
+
+const escapeRE = require('lodash.escaperegexp');
 
 const CURRENCY_SYMBOL_PLACEHOLDER = '¤';
 const DECIMAL_SEPARATOR_PLACEHOLDER = '.';
@@ -78,7 +74,7 @@ class NumberFormatter {
     }
 
     // Get the good CLDR formatting pattern. Sign is important here !
-    const pattern = this.getCldrPattern(majorDigits < 0);
+    const pattern = this.getCldrPattern(number < 0);
     formattedNumber = this.addPlaceholders(formattedNumber, pattern);
     formattedNumber = this.replaceSymbols(formattedNumber);
 
@@ -199,15 +195,28 @@ class NumberFormatter {
    */
   replaceSymbols(number) {
     const symbols = this.numberSpecification.getSymbol();
-    let num = number;
-    num = num.split(DECIMAL_SEPARATOR_PLACEHOLDER).join(symbols.getDecimal());
-    num = num.split(GROUP_SEPARATOR_PLACEHOLDER).join(symbols.getGroup());
-    num = num.split(MINUS_SIGN_PLACEHOLDER).join(symbols.getMinusSign());
-    num = num.split(PERCENT_SYMBOL_PLACEHOLDER).join(symbols.getPercentSign());
-    num = num.split(PLUS_SIGN_PLACEHOLDER).join(symbols.getPlusSign());
 
-    return num;
+    const map = {};
+    map[DECIMAL_SEPARATOR_PLACEHOLDER] = symbols.getDecimal();
+    map[GROUP_SEPARATOR_PLACEHOLDER] = symbols.getGroup();
+    map[MINUS_SIGN_PLACEHOLDER] = symbols.getMinusSign();
+    map[PERCENT_SYMBOL_PLACEHOLDER] = symbols.getPercentSign();
+    map[PLUS_SIGN_PLACEHOLDER] = symbols.getPlusSign();
+
+    return this.strtr(number, map);
   }
+
+  /**
+   * strtr() for JavaScript
+   * Translate characters or replace substrings
+   */
+  strtr(str, pairs) {
+    const substrs = Object.keys(pairs).map(escapeRE);
+    return str.split(RegExp(`(${substrs.join('|')})`))
+      .map(part => pairs[part] || part)
+      .join('');
+  }
+
 
   /**
    * Add missing placeholders to the number using the passed CLDR pattern.
@@ -262,7 +271,13 @@ class NumberFormatter {
   }
 
   static build(specifications) {
-    const symbol = new NumberSymbol(...specifications.symbol);
+    let symbol;
+    if (undefined !== specifications.numberSymbols) {
+      symbol = new NumberSymbol(...specifications.numberSymbols);
+    } else {
+      symbol = new NumberSymbol(...specifications.symbol);
+    }
+
     let specification;
     if (specifications.currencySymbol) {
       specification = new PriceSpecification(

@@ -22,6 +22,7 @@ namespace PrestaShop\Module\PrestashopCheckout\Handler;
 
 use PrestaShop\Module\PrestashopCheckout\Api\Payment\Order;
 use PrestaShop\Module\PrestashopCheckout\Builder\Payload\OrderPayloadBuilder;
+use PrestaShop\Module\PrestashopCheckout\Exception\PsCheckoutException;
 use PrestaShop\Module\PrestashopCheckout\Presenter\Cart\CartPresenter;
 use PrestaShop\Module\PrestashopCheckout\ShopContext;
 
@@ -43,10 +44,19 @@ class CreatePaypalOrderHandler
         $this->context = $context;
     }
 
+    /**
+     * @param bool $expressCheckout
+     * @param bool $updateOrder
+     * @param string|null $paypalOrderId
+     *
+     * @return array
+     *
+     * @throws PsCheckoutException
+     */
     public function handle($expressCheckout = false, $updateOrder = false, $paypalOrderId = null)
     {
         // Present an improved cart in order to create the payload
-        $cartPresenter = (new CartPresenter($this->context))->present();
+        $cartPresenter = (new CartPresenter())->present();
 
         $builder = new OrderPayloadBuilder($cartPresenter);
 
@@ -88,6 +98,14 @@ class CreatePaypalOrderHandler
                 $paypalOrder = (new Order($this->context->link))->create($payload);
             }
         }
+
+        /** @var \Ps_checkout $module */
+        $module = \Module::getInstanceByName('ps_checkout');
+        $module->getLogger()->info(sprintf(
+            'Create PayPal Order %s from cart %s',
+            $paypalOrder['body']['id'],
+            $this->context->cart->id
+        ));
 
         return $paypalOrder;
     }

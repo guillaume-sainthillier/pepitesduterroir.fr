@@ -1,27 +1,21 @@
 <?php
 /**
- * 2007-2019 PrestaShop.
+ * Copyright since 2007 PrestaShop SA and Contributors
+ * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
  *
  * NOTICE OF LICENSE
  *
  * This source file is subject to the Academic Free License 3.0 (AFL-3.0)
- * that is bundled with this package in the file LICENSE.txt.
+ * that is bundled with this package in the file LICENSE.md.
  * It is also available through the world-wide-web at this URL:
  * https://opensource.org/licenses/AFL-3.0
  * If you did not receive a copy of the license and are unable to
  * obtain it through the world-wide-web, please send an email
  * to license@prestashop.com so we can send you a copy immediately.
  *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade PrestaShop to newer
- * versions in the future. If you wish to customize PrestaShop for your
- * needs please refer to http://www.prestashop.com for more information.
- *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2019 PrestaShop SA
+ * @copyright Since 2007 PrestaShop SA and Contributors
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License 3.0 (AFL-3.0)
- * International Registered Trademark & Property of PrestaShop SA
  */
 if (!defined('_PS_VERSION_')) {
     exit;
@@ -38,6 +32,11 @@ use PrestaShop\PrestaShop\Core\Module\WidgetInterface;
 
 class Ps_Facetedsearch extends Module implements WidgetInterface
 {
+    /**
+     * @var string Name of the module running on PS 1.6.x. Used for data migration.
+     */
+    const PS_16_EQUIVALENT_MODULE = 'blocklayered';
+
     /**
      * Lock indexation if too many products
      *
@@ -60,6 +59,13 @@ class Ps_Facetedsearch extends Module implements WidgetInterface
     const ISO_CODE_TAX_FREE = [
         'US',
     ];
+
+    /**
+     * Number of digits for MySQL DECIMAL
+     *
+     * @var int
+     */
+    const DECIMAL_DIGITS = 5;
 
     /**
      * @var bool
@@ -85,7 +91,7 @@ class Ps_Facetedsearch extends Module implements WidgetInterface
     {
         $this->name = 'ps_facetedsearch';
         $this->tab = 'front_office_features';
-        $this->version = '3.0.6';
+        $this->version = '3.6.0';
         $this->author = 'PrestaShop';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -174,31 +180,44 @@ class Ps_Facetedsearch extends Module implements WidgetInterface
             return false;
         }
 
-        Configuration::updateValue('PS_LAYERED_SHOW_QTIES', 1);
-        Configuration::updateValue('PS_LAYERED_FULL_TREE', 1);
-        Configuration::updateValue('PS_LAYERED_FILTER_PRICE_USETAX', 1);
-        Configuration::updateValue('PS_LAYERED_FILTER_CATEGORY_DEPTH', 1);
-        Configuration::updateValue('PS_ATTRIBUTE_ANCHOR_SEPARATOR', '-');
-        Configuration::updateValue('PS_LAYERED_FILTER_PRICE_ROUNDING', 1);
+        if ($this->uninstallPrestaShop16Module()) {
+            $this->rebuildLayeredStructure();
+            $this->buildLayeredCategories();
 
-        $this->psLayeredFullTree = 1;
+            $this->rebuildPriceIndexTable();
 
-        $this->rebuildLayeredStructure();
-        $this->buildLayeredCategories();
+            $this->getDatabase()->execute('TRUNCATE TABLE ' . _DB_PREFIX_ . 'layered_filter CHANGE `filters` `filters` LONGTEXT NULL');
+            $this->getDatabase()->execute('DROP TABLE IF EXISTS ' . _DB_PREFIX_ . 'friendly_url');
+        } else {
+            Configuration::updateValue('PS_LAYERED_CACHE_ENABLED', 1);
+            Configuration::updateValue('PS_LAYERED_SHOW_QTIES', 1);
+            Configuration::updateValue('PS_LAYERED_FULL_TREE', 1);
+            Configuration::updateValue('PS_LAYERED_FILTER_PRICE_USETAX', 1);
+            Configuration::updateValue('PS_LAYERED_FILTER_CATEGORY_DEPTH', 1);
+            Configuration::updateValue('PS_ATTRIBUTE_ANCHOR_SEPARATOR', '-');
+            Configuration::updateValue('PS_LAYERED_FILTER_PRICE_ROUNDING', 1);
+            Configuration::updateValue('PS_LAYERED_FILTER_SHOW_OUT_OF_STOCK_LAST', 0);
+            Configuration::updateValue('PS_LAYERED_FILTER_BY_DEFAULT_CATEGORY', 0);
 
-        $productsCount = $this->getDatabase()->getValue('SELECT COUNT(*) FROM `' . _DB_PREFIX_ . 'product`');
+            $this->psLayeredFullTree = 1;
 
-        if ($productsCount < static::LOCK_TEMPLATE_CREATION) {
-            $this->rebuildLayeredCache();
-        }
+            $this->rebuildLayeredStructure();
+            $this->buildLayeredCategories();
 
-        $this->rebuildPriceIndexTable();
-        $this->installIndexableAttributeTable();
-        $this->installProductAttributeTable();
+            $productsCount = $this->getDatabase()->getValue('SELECT COUNT(*) FROM `' . _DB_PREFIX_ . 'product`');
 
-        if ($productsCount < static::LOCK_TOO_MANY_PRODUCTS) {
-            $this->fullPricesIndexProcess();
-            $this->indexAttributes();
+            if ($productsCount < static::LOCK_TEMPLATE_CREATION) {
+                $this->rebuildLayeredCache();
+            }
+
+            $this->rebuildPriceIndexTable();
+            $this->installIndexableAttributeTable();
+            $this->installProductAttributeTable();
+
+            if ($productsCount < static::LOCK_TOO_MANY_PRODUCTS) {
+                $this->fullPricesIndexProcess();
+                $this->indexAttributes();
+            }
         }
 
         return true;
@@ -207,12 +226,15 @@ class Ps_Facetedsearch extends Module implements WidgetInterface
     public function uninstall()
     {
         /* Delete all configurations */
+        Configuration::deleteByName('PS_LAYERED_CACHE_ENABLED');
         Configuration::deleteByName('PS_LAYERED_SHOW_QTIES');
         Configuration::deleteByName('PS_LAYERED_FULL_TREE');
         Configuration::deleteByName('PS_LAYERED_INDEXED');
         Configuration::deleteByName('PS_LAYERED_FILTER_PRICE_USETAX');
         Configuration::deleteByName('PS_LAYERED_FILTER_CATEGORY_DEPTH');
         Configuration::deleteByName('PS_LAYERED_FILTER_PRICE_ROUNDING');
+        Configuration::deleteByName('PS_LAYERED_FILTER_SHOW_OUT_OF_STOCK_LAST');
+        Configuration::deleteByName('PS_LAYERED_FILTER_BY_DEFAULT_CATEGORY');
 
         $this->getDatabase()->execute('DROP TABLE IF EXISTS ' . _DB_PREFIX_ . 'layered_category');
         $this->getDatabase()->execute('DROP TABLE IF EXISTS ' . _DB_PREFIX_ . 'layered_filter');
@@ -228,6 +250,28 @@ class Ps_Facetedsearch extends Module implements WidgetInterface
         $this->getDatabase()->execute('DROP TABLE IF EXISTS ' . _DB_PREFIX_ . 'layered_product_attribute');
 
         return parent::uninstall();
+    }
+
+    /**
+     * Migrate data from 1.6 equivalent module (if applicable), then uninstall
+     */
+    private function uninstallPrestaShop16Module()
+    {
+        if (!Module::isInstalled(self::PS_16_EQUIVALENT_MODULE)) {
+            return false;
+        }
+        $oldModule = Module::getInstanceByName(self::PS_16_EQUIVALENT_MODULE);
+        if ($oldModule) {
+            // This closure calls the parent class to prevent data to be erased
+            // It allows the new module to be configured without migration
+            $parentUninstallClosure = function () {
+                return parent::uninstall();
+            };
+            $parentUninstallClosure = $parentUninstallClosure->bindTo($oldModule, get_class($oldModule));
+            $parentUninstallClosure();
+        }
+
+        return true;
     }
 
     /**
@@ -367,7 +411,7 @@ class Ps_Facetedsearch extends Module implements WidgetInterface
             );
 
             if (empty($taxRatesByCountry) || !Configuration::get('PS_LAYERED_FILTER_PRICE_USETAX')) {
-                $idCountry = (int) Configuration::get('PS_COUNTRY_DEFAULT');
+                $idCountry = (int) Configuration::get('PS_COUNTRY_DEFAULT', null, null, $idShop);
                 $isoCode = Country::getIsoById($idCountry);
                 $taxRatesByCountry = [['rate' => 0, 'id_country' => $idCountry, 'iso_code' => $isoCode]];
             }
@@ -384,12 +428,6 @@ class Ps_Facetedsearch extends Module implements WidgetInterface
 
                 // Get price by currency & country, without reduction!
                 foreach ($currencyList as $currency) {
-                    if (!empty($productMinPrices)) {
-                        $minPrice[$idCountry][$currency['id_currency']] = null;
-                        $maxPrice[$idCountry][$currency['id_currency']] = null;
-                        continue;
-                    }
-
                     $price = Product::priceCalculation(
                         $idShop,
                         (int) $idProduct,
@@ -491,8 +529,8 @@ class Ps_Facetedsearch extends Module implements WidgetInterface
                             $minPrice[$idCountry][$currency['id_currency']] = $price;
                         }
 
-                        if ($minPrice > $maxPrice[$idCountry][$currency['id_currency']]) {
-                            $maxPrice[$idCountry][$currency['id_currency']] = $minPrice;
+                        if ($price > $maxPrice[$idCountry][$currency['id_currency']]) {
+                            $maxPrice[$idCountry][$currency['id_currency']] = $price;
                         }
                     }
                 }
@@ -506,15 +544,15 @@ class Ps_Facetedsearch extends Module implements WidgetInterface
                     $minPriceValue = array_key_exists($idCountry, $minPrice) ? $minPrice[$idCountry][$currency['id_currency']] : 0;
                     $maxPriceValue = array_key_exists($idCountry, $maxPrice) ? $maxPrice[$idCountry][$currency['id_currency']] : 0;
                     if (!in_array($taxRateByCountry['iso_code'], self::ISO_CODE_TAX_FREE)) {
-                        $minPriceValue = Tools::ps_round($minPriceValue * (100 + $taxRate) / 100, 0);
-                        $maxPriceValue = Tools::ps_round($maxPriceValue * (100 + $taxRate) / 100, 0);
+                        $minPriceValue = Tools::ps_round($minPriceValue * (100 + $taxRate) / 100, self::DECIMAL_DIGITS);
+                        $maxPriceValue = Tools::ps_round($maxPriceValue * (100 + $taxRate) / 100, self::DECIMAL_DIGITS);
                     }
 
                     $values[] = '(' . (int) $idProduct . ',
                         ' . (int) $currency['id_currency'] . ',
                         ' . $idShop . ',
-                        ' . (int) $minPriceValue . ',
-                        ' . (int) $maxPriceValue . ',
+                        ' . $minPriceValue . ',
+                        ' . $maxPriceValue . ',
                         ' . (int) $idCountry . ')';
                 }
             }
@@ -522,8 +560,8 @@ class Ps_Facetedsearch extends Module implements WidgetInterface
             if (!empty($values)) {
                 $this->getDatabase()->execute(
                     'INSERT INTO `' . _DB_PREFIX_ . 'layered_price_index` (id_product, id_currency, id_shop, price_min, price_max, id_country)
-                VALUES ' . implode(',', $values) . '
-                ON DUPLICATE KEY UPDATE id_product = id_product' // Avoid duplicate keys
+                     VALUES ' . implode(',', $values) . '
+                     ON DUPLICATE KEY UPDATE id_product = id_product' // Avoid duplicate keys
                 );
             }
         }
@@ -543,15 +581,9 @@ class Ps_Facetedsearch extends Module implements WidgetInterface
             } elseif (!Tools::getValue('categoryBox')) {
                 $message = $this->displayError($this->trans('You must select at least one category.', [], 'Modules.Facetedsearch.Admin'));
             } else {
-                if (Tools::getValue('id_layered_filter')) {
-                    $this->getDatabase()->execute(
-                        'DELETE FROM ' . _DB_PREFIX_ . 'layered_filter
-                        WHERE id_layered_filter = ' . (int) Tools::getValue('id_layered_filter')
-                    );
-                    $this->buildLayeredCategories();
-                }
-
-                if (Tools::getValue('scope') == 1) {
+                // Get or generate id
+                $idLayeredFilter = (int) Tools::getValue('id_layered_filter');
+                if (Tools::getValue('scope')) {
                     $this->getDatabase()->execute('TRUNCATE TABLE ' . _DB_PREFIX_ . 'layered_filter');
                     $categories = $this->getDatabase()->executeS(
                         'SELECT id_category FROM ' . _DB_PREFIX_ . 'category'
@@ -562,80 +594,68 @@ class Ps_Facetedsearch extends Module implements WidgetInterface
                     }
                 }
 
-                $idLayeredFilter = (int) Tools::getValue('id_layered_filter');
-
-                if (!$idLayeredFilter) {
-                    $idLayeredFilter = (int) $this->getDatabase()->Insert_ID();
-                }
-
-                $shopList = [];
-
+                // Associate Shops
                 if (isset($_POST['checkBoxShopAsso_layered_filter'])) {
+                    $shopList = [];
                     foreach ($_POST['checkBoxShopAsso_layered_filter'] as $idShop => $row) {
-                        $assos[] = ['id_object' => (int) $idLayeredFilter, 'id_shop' => (int) $idShop];
+                        $assos[] = ['id_shop' => (int) $idShop];
                         $shopList[] = (int) $idShop;
                     }
                 } else {
-                    $shopList = [$this->getContext()->shop->id];
+                    $shopList = [(int) $this->getContext()->shop->id];
                 }
 
-                $this->getDatabase()->execute(
-                    'DELETE FROM ' . _DB_PREFIX_ . 'layered_filter_shop WHERE `id_layered_filter` = ' . (int) $idLayeredFilter
-                );
-
-                if (count($_POST['categoryBox'])) {
+                if (!empty($_POST['categoryBox']) && is_array($_POST['categoryBox'])) {
                     /* Clean categoryBox before use */
-                    if (isset($_POST['categoryBox']) && is_array($_POST['categoryBox'])) {
-                        foreach ($_POST['categoryBox'] as &$categoryBoxTmp) {
-                            $categoryBoxTmp = (int) $categoryBoxTmp;
-                        }
-                    }
-
-                    $filterValues = [];
-
-                    foreach ($_POST['categoryBox'] as $idc) {
-                        $filterValues['categories'][] = (int) $idc;
-                    }
-
-                    $filterValues['shop_list'] = $shopList;
-                    $values = false;
+                    $_POST['categoryBox'] = array_map('intval', $_POST['categoryBox']);
+                    $filterValues = [
+                        'shop_list' => $shopList,
+                    ];
 
                     foreach ($_POST['categoryBox'] as $idCategoryLayered) {
-                        foreach ($_POST as $key => $value) {
-                            if (substr($key, 0, 17) == 'layered_selection' && $value == 'on') {
-                                $values = true;
-                                $type = 0;
-                                $limit = 0;
-
-                                if (Tools::getValue($key . '_filter_type')) {
-                                    $type = Tools::getValue($key . '_filter_type');
-                                }
-                                if (Tools::getValue($key . '_filter_show_limit')) {
-                                    $limit = Tools::getValue($key . '_filter_show_limit');
-                                }
-
-                                $filterValues[$key] = [
-                                    'filter_type' => (int) $type,
-                                    'filter_show_limit' => (int) $limit,
-                                ];
-                            }
-                        }
+                        $filterValues['categories'][] = $idCategoryLayered;
                     }
 
-                    $valuesToInsert = [
+                    foreach ($_POST as $key => $value) {
+                        if (!preg_match('~^(?P<key>layered_selection_.*)(?<!_filter_)(?<!type)(?<!show_limit)$~', $key, $matches)) {
+                            continue;
+                        }
+
+                        $filterValues[$matches['key']] = [
+                            'filter_type' => (int) Tools::getValue($matches['key'] . '_filter_type', 0),
+                            'filter_show_limit' => (int) Tools::getValue($matches['key'] . '_filter_show_limit', 0),
+                        ];
+                    }
+
+                    $values = [
                         'name' => pSQL(Tools::getValue('layered_tpl_name')),
                         'filters' => pSQL(serialize($filterValues)),
                         'n_categories' => (int) count($filterValues['categories']),
-                        'date_add' => date('Y-m-d H:i:s'), ];
+                    ];
 
-                    if (isset($_POST['id_layered_filter']) && $_POST['id_layered_filter']) {
-                        $valuesToInsert['id_layered_filter'] = (int) Tools::getValue('id_layered_filter');
+                    if (!$idLayeredFilter) {
+                        $values['date_add'] = date('Y-m-d H:i:s');
+                        $sql = 'INSERT INTO ' . _DB_PREFIX_ . 'layered_filter ' .
+                             '(name, filters, n_categories, date_add, id_layered_filter) ' .
+                             'VALUES (' .
+                             '"' . pSQL($values['name']) . '", ' .
+                             '"' . $values['filters'] . '", ' .
+                             '' . (int) $values['n_categories'] . ', ' .
+                             '"' . pSQL($values['date_add']) . '", ' .
+                             '' . $idLayeredFilter . ')';
+                        $this->getDatabase()->execute($sql);
+                        $idLayeredFilter = (int) $this->getDatabase()->Insert_ID();
+                    } else {
+                        $this->getDatabase()->execute(
+                            'DELETE FROM ' . _DB_PREFIX_ . 'layered_filter_shop WHERE `id_layered_filter` = ' . (int) $idLayeredFilter
+                        );
+                        $sql = 'UPDATE ' . _DB_PREFIX_ . 'layered_filter ' .
+                             'SET name = "' . pSQL($values['name']) . '", ' .
+                             'filters = "' . $values['filters'] . '", ' .
+                             'n_categories = ' . (int) $values['n_categories'] . ' ' .
+                             'WHERE id_layered_filter = ' . $idLayeredFilter;
+                        $this->getDatabase()->execute($sql);
                     }
-
-                    $idLayeredFilter = isset($valuesToInsert['id_layered_filter']) ? (int) $valuesToInsert['id_layered_filter'] : 'NULL';
-                    $sql = 'INSERT INTO ' . _DB_PREFIX_ . 'layered_filter (name, filters, n_categories, date_add, id_layered_filter) VALUES ("' . pSQL($valuesToInsert['name']) . '", "' . $valuesToInsert['filters'] . '",' . (int) $valuesToInsert['n_categories'] . ',"' . pSQL($valuesToInsert['date_add']) . '",' . $idLayeredFilter . ')';
-                    $this->getDatabase()->execute($sql);
-                    $idLayeredFilter = (int) $this->getDatabase()->Insert_ID();
 
                     if (isset($assos)) {
                         foreach ($assos as $asso) {
@@ -647,16 +667,26 @@ class Ps_Facetedsearch extends Module implements WidgetInterface
                     }
 
                     $this->buildLayeredCategories();
-                    $message = $this->displayConfirmation($this->trans('Your filter', [], 'Modules.Facetedsearch.Admin') . ' "' . Tools::safeOutput(Tools::getValue('layered_tpl_name')) . '" ' .
-                        ((isset($_POST['id_layered_filter']) && $_POST['id_layered_filter']) ? $this->trans('was updated successfully.', [], 'Modules.Facetedsearch.Admin') : $this->trans('was added successfully.', [], 'Modules.Facetedsearch.Admin')));
+                    $message = $this->displayConfirmation(
+                        $this->trans('Your filter', [], 'Modules.Facetedsearch.Admin') . ' "' .
+                        Tools::safeOutput(Tools::getValue('layered_tpl_name')) . '" ' .
+                        (
+                            !empty($_POST['id_layered_filter']) ?
+                            $this->trans('was updated successfully.', [], 'Modules.Facetedsearch.Admin') :
+                            $this->trans('was added successfully.', [], 'Modules.Facetedsearch.Admin')
+                        )
+                    );
                 }
             }
         } elseif (Tools::isSubmit('submitLayeredSettings')) {
+            Configuration::updateValue('PS_LAYERED_CACHE_ENABLED', (int) Tools::getValue('ps_layered_cache_enabled'));
             Configuration::updateValue('PS_LAYERED_SHOW_QTIES', (int) Tools::getValue('ps_layered_show_qties'));
             Configuration::updateValue('PS_LAYERED_FULL_TREE', (int) Tools::getValue('ps_layered_full_tree'));
             Configuration::updateValue('PS_LAYERED_FILTER_PRICE_USETAX', (int) Tools::getValue('ps_layered_filter_price_usetax'));
             Configuration::updateValue('PS_LAYERED_FILTER_CATEGORY_DEPTH', (int) Tools::getValue('ps_layered_filter_category_depth'));
             Configuration::updateValue('PS_LAYERED_FILTER_PRICE_ROUNDING', (int) Tools::getValue('ps_layered_filter_price_rounding'));
+            Configuration::updateValue('PS_LAYERED_FILTER_SHOW_OUT_OF_STOCK_LAST', (int) Tools::getValue('ps_layered_filter_show_out_of_stock_last'));
+            Configuration::updateValue('PS_LAYERED_FILTER_BY_DEFAULT_CATEGORY', (int) Tools::getValue('ps_layered_filter_by_default_category'));
 
             $this->psLayeredFullTree = (int) Tools::getValue('ps_layered_full_tree');
 
@@ -737,33 +767,36 @@ class Ps_Facetedsearch extends Module implements WidgetInterface
         }
 
         if (Tools::getValue('edit_filters_template')) {
+            $idLayeredFilter = (int) Tools::getValue('id_layered_filter');
             $template = $this->getDatabase()->getRow(
                 'SELECT *
                 FROM `' . _DB_PREFIX_ . 'layered_filter`
-                WHERE id_layered_filter = ' . (int) Tools::getValue('id_layered_filter')
+                WHERE id_layered_filter = ' . $idLayeredFilter
             );
 
-            $filters = Tools::unSerialize($template['filters']);
-            $treeCategoriesHelper->setSelectedCategories($filters['categories']);
-            $this->context->smarty->assign('categories_tree', $treeCategoriesHelper->render());
+            if (!empty($template)) {
+                $filters = Tools::unSerialize($template['filters']);
+                $treeCategoriesHelper->setSelectedCategories($filters['categories']);
+                $this->context->smarty->assign('categories_tree', $treeCategoriesHelper->render());
 
-            $selectShops = $filters['shop_list'];
-            unset($filters['categories']);
-            unset($filters['shop_list']);
+                $selectShops = $filters['shop_list'];
+                unset($filters['categories']);
+                unset($filters['shop_list']);
 
-            $this->context->smarty->assign([
-                'current_url' => $this->context->link->getAdminLink('AdminModules') . '&configure=ps_facetedsearch&tab_module=front_office_features&module_name=ps_facetedsearch',
-                'uri' => $this->getPathUri(),
-                'id_layered_filter' => (int) Tools::getValue('id_layered_filter'),
-                'template_name' => $template['name'],
-                'attribute_groups' => $attributeGroups,
-                'features' => $features,
-                'filters' => $filters,
-                'total_filters' => 6 + count($attributeGroups) + count($features),
-                'default_filters' => $this->getDefaultFilters(),
-            ]);
+                $this->context->smarty->assign([
+                    'current_url' => $this->context->link->getAdminLink('AdminModules') . '&configure=ps_facetedsearch&tab_module=front_office_features&module_name=ps_facetedsearch',
+                    'uri' => $this->getPathUri(),
+                    'id_layered_filter' => $idLayeredFilter,
+                    'template_name' => $template['name'],
+                    'attribute_groups' => $attributeGroups,
+                    'features' => $features,
+                    'filters' => $filters,
+                    'total_filters' => 6 + count($attributeGroups) + count($features),
+                    'default_filters' => $this->getDefaultFilters(),
+                ]);
 
-            return $this->display(__FILE__, 'views/templates/admin/view.tpl');
+                return $this->display(__FILE__, 'views/templates/admin/view.tpl');
+            }
         }
 
         $this->context->smarty->assign([
@@ -780,11 +813,14 @@ class Ps_Facetedsearch extends Module implements WidgetInterface
             'clear_cache_url' => $moduleUrl . 'ps_facetedsearch-clear-cache.php' . '?token=' . substr(Tools::encrypt('ps_facetedsearch/index'), 0, 10),
             'filters_templates' => $this->getDatabase()->executeS('SELECT * FROM ' . _DB_PREFIX_ . 'layered_filter ORDER BY date_add DESC'),
             'show_quantities' => Configuration::get('PS_LAYERED_SHOW_QTIES'),
+            'cache_enabled' => Configuration::get('PS_LAYERED_CACHE_ENABLED'),
             'full_tree' => $this->psLayeredFullTree,
             'category_depth' => Configuration::get('PS_LAYERED_FILTER_CATEGORY_DEPTH'),
             'price_use_tax' => (bool) Configuration::get('PS_LAYERED_FILTER_PRICE_USETAX'),
             'limit_warning' => $this->displayLimitPostWarning(21 + count($attributeGroups) * 3 + count($features) * 3),
             'price_use_rounding' => (bool) Configuration::get('PS_LAYERED_FILTER_PRICE_ROUNDING'),
+            'show_out_of_stock_last' => (bool) Configuration::get('PS_LAYERED_FILTER_SHOW_OUT_OF_STOCK_LAST'),
+            'filter_by_default_category' => (bool) Configuration::get('PS_LAYERED_FILTER_BY_DEFAULT_CATEGORY'),
         ]);
 
         return $this->display(__FILE__, 'views/templates/admin/manage.tpl');
@@ -1164,7 +1200,7 @@ VALUES(' . $last_id . ', ' . (int) $idShop . ')');
                 $params['errors'][] = Tools::displayError(
                     $this->trans(
                         '"%s" is not a valid url',
-                        [$urlNameLang],
+                        [Tools::safeOutput($urlNameLang, true)],
                         'Modules.Facetedsearch.Admin'
                     )
                 );
@@ -1191,7 +1227,7 @@ VALUES(' . $last_id . ', ' . (int) $idShop . ')');
      */
     public function invalidateLayeredFilterBlockCache()
     {
-        $this->getDatabase()->execute('TRUNCATE TABLE ' . _DB_PREFIX_ . 'layered_filter_block');
+        return $this->getDatabase()->execute('TRUNCATE TABLE ' . _DB_PREFIX_ . 'layered_filter_block');
     }
 
     /**
@@ -1206,8 +1242,8 @@ VALUES(' . $last_id . ', ' . (int) $idShop . ')');
             `id_product` INT  NOT NULL,
             `id_currency` INT NOT NULL,
             `id_shop` INT NOT NULL,
-            `price_min` INT NOT NULL,
-            `price_max` INT NOT NULL,
+            `price_min` DECIMAL(11, 5) NOT NULL,
+            `price_max` DECIMAL(11, 5) NOT NULL,
             `id_country` INT NOT NULL,
             PRIMARY KEY (`id_product`, `id_currency`, `id_shop`, `id_country`),
             INDEX `id_currency` (`id_currency`),
@@ -1370,20 +1406,12 @@ VALUES(' . $last_id . ', ' . (int) $idShop . ')');
         );
 
         if (($nbProducts > 0 && !$full || $cursor != $lastCursor && $full) && !$ajax) {
-            $token = substr(Tools::encrypt('ps_facetedsearch/index'), 0, 10);
-            $domain = Tools::usingSecureMode()
-                    ? Tools::getShopDomainSsl(true)
-                    : Tools::getShopDomain(true);
-
-            if (!Tools::file_get_contents($domain . __PS_BASE_URI__ . 'modules/ps_facetedsearch/ps_facetedsearch-price-indexer.php?token=' . $token . '&cursor=' . (int) $cursor . '&full=' . (int) $full)) {
-                $this->indexPrices((int) $cursor, (int) $full);
-            }
-
-            return $cursor;
+            return $this->indexPrices((int) $cursor, $full, $ajax, $smart);
         }
 
         if ($ajax && $nbProducts > 0 && $cursor != $lastCursor && $full) {
             return json_encode([
+                'total' => $nbProducts,
                 'cursor' => $cursor,
                 'count' => $indexedProducts,
             ]);
@@ -1391,8 +1419,9 @@ VALUES(' . $last_id . ', ' . (int) $idShop . ')');
 
         if ($ajax && $nbProducts > 0 && !$full) {
             return json_encode([
+                'total' => $nbProducts,
                 'cursor' => $cursor,
-                'count' => $nbProducts,
+                'count' => $indexedProducts,
             ]);
         }
 
@@ -1404,7 +1433,7 @@ VALUES(' . $last_id . ', ' . (int) $idShop . ')');
             ]);
         }
 
-        return -1;
+        return $nbProducts;
     }
 
     /**

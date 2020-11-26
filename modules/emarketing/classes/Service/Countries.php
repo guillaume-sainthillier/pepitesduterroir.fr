@@ -7,7 +7,7 @@
  * you accept the licence agreement.
  *
  * @author    emarketing www.emarketing.com <integrations@emarketing.com>
- * @copyright 2019 easymarketing AG
+ * @copyright 2020 emarketing AG
  * @license   https://opensource.org/licenses/GPL-3.0 GNU General Public License version 3
  */
 
@@ -52,6 +52,10 @@ class Countries
 
         $currencies = \Currency::getCurrenciesByIdShop($shopId);
         foreach ($currencies as $currency) {
+            if ($currency['deleted'] == 1 || $currency['active'] == 0) {
+                continue;
+            }
+
             $currencyData[] = array(
                 'id_currency' => (string)$currency['id_currency'],
                 'name' => $currency['name'],

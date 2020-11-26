@@ -43,6 +43,20 @@ class stripe_officialValidationModuleFrontController extends ModuleFrontControll
     {
         parent::initContent();
 
+        $url_failed = Context::getContext()->link->getModuleLink(
+            $this->module->name,
+            'orderFailure'
+        );
+
+        if (empty($this->context->cart->getProducts())) {
+            $chargeResult = array(
+                'code' => '0',
+                'url' => $url_failed
+            );
+            echo Tools::jsonEncode($chargeResult);
+            exit;
+        }
+
         // Create the handler
         $handler = new ActionsHandler();
 
@@ -50,15 +64,19 @@ class stripe_officialValidationModuleFrontController extends ModuleFrontControll
         $handler->setConveyor(array(
                     'source' => Tools::getValue('source'),
                     'response' => Tools::getValue('response'),
+                    'id_payment_intent' => Tools::getValue('payment_intent'),
+                    'saveCard' => Tools::getValue('saveCard'),
                     'module' => $this->module,
                     'context' => $this->context,
                 ));
 
         // Set list of actions to execute
-        if (empty(Tools::getValue('source'))) {
-            $handler->addActions('prepareFlowNone', 'updatePaymentIntent', 'createOrder', 'addTentative');
-        } else {
+        if (Tools::getValue('source')) {
             $handler->addActions('prepareFlowRedirect', 'updatePaymentIntent', 'createOrder', 'addTentative');
+        } elseif (Tools::getValue('payment_intent')) {
+            $handler->addActions('prepareFlowRedirectPaymentIntent', 'updatePaymentIntent', 'createOrder', 'addTentative');
+        } else {
+            $handler->addActions('prepareFlowNone', 'updatePaymentIntent', 'createOrder', 'saveCard', 'addTentative');
         }
 
         // Process actions chain
@@ -70,10 +88,6 @@ class stripe_officialValidationModuleFrontController extends ModuleFrontControll
             ProcessLoggerHandler::logError('Order validation process failed.');
             ProcessLoggerHandler::closeLogger();
 
-            $url_failed = Context::getContext()->link->getModuleLink(
-                $this->module->name,
-                'orderFailure'
-            );
             Tools::redirect($url_failed);
         }
 
@@ -92,7 +106,7 @@ class stripe_officialValidationModuleFrontController extends ModuleFrontControll
             )
         );
 
-        if (!empty(Tools::getValue('source'))) {
+        if (!empty(Tools::getValue('source')) || !empty(Tools::getValue('payment_intent'))) {
             Tools::redirect($url);
             exit;
         }

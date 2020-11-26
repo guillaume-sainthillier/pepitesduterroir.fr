@@ -1,33 +1,26 @@
 <?php
 /**
- * 2007-2019 PrestaShop.
+ * Copyright since 2007 PrestaShop SA and Contributors
+ * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
  *
  * NOTICE OF LICENSE
  *
  * This source file is subject to the Academic Free License 3.0 (AFL-3.0)
- * that is bundled with this package in the file LICENSE.txt.
+ * that is bundled with this package in the file LICENSE.md.
  * It is also available through the world-wide-web at this URL:
  * https://opensource.org/licenses/AFL-3.0
  * If you did not receive a copy of the license and are unable to
  * obtain it through the world-wide-web, please send an email
  * to license@prestashop.com so we can send you a copy immediately.
  *
- * DISCLAIMER
- *
- * Do not edit or add to this file if you wish to upgrade PrestaShop to newer
- * versions in the future. If you wish to customize PrestaShop for your
- * needs please refer to http://www.prestashop.com for more information.
- *
  * @author    PrestaShop SA <contact@prestashop.com>
- * @copyright 2007-2019 PrestaShop SA
+ * @copyright Since 2007 PrestaShop SA and Contributors
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License 3.0 (AFL-3.0)
- * International Registered Trademark & Property of PrestaShop SA
  */
 
 namespace PrestaShop\Module\FacetedSearch\Product;
 
 use Configuration;
-use Context;
 use PrestaShop\Module\FacetedSearch\Filters;
 use PrestaShop\Module\FacetedSearch\URLSerializer;
 use PrestaShop\PrestaShop\Core\Product\Search\Facet;
@@ -59,14 +52,21 @@ class SearchProvider implements FacetsRendererInterface, ProductSearchProviderIn
      */
     private $facetsSerializer;
 
+    /**
+     * @var SearchFactory
+     */
+    private $searchFactory;
+
     public function __construct(
         Ps_Facetedsearch $module,
         Filters\Converter $converter,
-        URLSerializer $serializer
+        URLSerializer $serializer,
+        SearchFactory $searchFactory = null
     ) {
         $this->module = $module;
         $this->filtersConverter = $converter;
         $this->facetsSerializer = $serializer;
+        $this->searchFactory = $searchFactory === null ? new SearchFactory() : $searchFactory;
     }
 
     /**
@@ -74,6 +74,7 @@ class SearchProvider implements FacetsRendererInterface, ProductSearchProviderIn
      */
     private function getAvailableSortOrders()
     {
+        $sortSalesDesc = new SortOrder('product', 'sales', 'desc');
         $sortPosAsc = new SortOrder('product', 'position', 'asc');
         $sortNameAsc = new SortOrder('product', 'name', 'asc');
         $sortNameDesc = new SortOrder('product', 'name', 'desc');
@@ -82,6 +83,9 @@ class SearchProvider implements FacetsRendererInterface, ProductSearchProviderIn
         $translator = $this->module->getTranslator();
 
         return [
+            $sortSalesDesc->setLabel(
+                $translator->trans('Best sellers', [], 'Modules.Facetedsearch.Shop')
+            ),
             $sortPosAsc->setLabel(
                 $translator->trans('Relevance', [], 'Modules.Facetedsearch.Shop')
             ),
@@ -115,7 +119,7 @@ class SearchProvider implements FacetsRendererInterface, ProductSearchProviderIn
         $facetedSearchFilters = $this->filtersConverter->createFacetedSearchFiltersFromQuery($query);
 
         $context = $this->module->getContext();
-        $facetedSearch = new Search($context);
+        $facetedSearch = $this->searchFactory->build($context);
         // init the search with the initial population associated with the current filters
         $facetedSearch->initSearch($facetedSearchFilters);
 
@@ -175,8 +179,7 @@ class SearchProvider implements FacetsRendererInterface, ProductSearchProviderIn
 
         $this->labelRangeFilters($facets);
         $this->addEncodedFacetsToFilters($facets);
-        $this->hideZeroValues($facets);
-        $this->hideUselessFacets($facets);
+        $this->hideUselessFacets($facets, (int) $result->getTotalProductsCount());
 
         $facetCollection = new FacetCollection();
         $nextMenu = $facetCollection->setFacets($facets);
@@ -203,8 +206,7 @@ class SearchProvider implements FacetsRendererInterface, ProductSearchProviderIn
             return '';
         }
 
-        return $this->module->render(
-            'views/templates/front/catalog/facets.tpl',
+        $this->module->getContext()->smarty->assign(
             [
                 'show_quantities' => Configuration::get('PS_LAYERED_SHOW_QTIES'),
                 'facets' => $facetsVar,
@@ -220,6 +222,10 @@ class SearchProvider implements FacetsRendererInterface, ProductSearchProviderIn
                 ),
             ]
         );
+
+        return $this->module->fetch(
+            'module:ps_facetedsearch/views/templates/front/catalog/facets.tpl'
+        );
     }
 
     /**
@@ -234,8 +240,7 @@ class SearchProvider implements FacetsRendererInterface, ProductSearchProviderIn
     {
         list($activeFilters) = $this->prepareActiveFiltersForRender($context, $result);
 
-        return $this->module->render(
-            'views/templates/front/catalog/active-filters.tpl',
+        $this->module->getContext()->smarty->assign(
             [
                 'activeFilters' => $activeFilters,
                 'clear_all_link' => $this->updateQueryString(
@@ -245,6 +250,10 @@ class SearchProvider implements FacetsRendererInterface, ProductSearchProviderIn
                     ]
                 ),
             ]
+        );
+
+        return $this->module->fetch(
+            'module:ps_facetedsearch/views/templates/front/catalog/active-filters.tpl'
         );
     }
 
@@ -306,7 +315,7 @@ class SearchProvider implements FacetsRendererInterface, ProductSearchProviderIn
         $facetsArray = $facet->toArray();
         foreach ($facetsArray['filters'] as &$filter) {
             $filter['facetLabel'] = $facet->getLabel();
-            if ($filter['nextEncodedFacets']) {
+            if ($filter['nextEncodedFacets'] || $facet->getWidgetType() === 'slider') {
                 $filter['nextEncodedFacetsURL'] = $this->updateQueryString([
                     'q' => $filter['nextEncodedFacets'],
                     'page' => null,
@@ -330,12 +339,16 @@ class SearchProvider implements FacetsRendererInterface, ProductSearchProviderIn
     private function labelRangeFilters(array $facets)
     {
         foreach ($facets as $facet) {
-            if ($facet->getType() === 'weight') {
-                $unit = Configuration::get('PS_WEIGHT_UNIT');
-                foreach ($facet->getFilters() as $filter) {
-                    $filterValue = $filter->getValue();
-                    $min = empty($filterValue[0]) ? $facet->getProperty('min') : $filterValue[0];
-                    $max = empty($filterValue[1]) ? $facet->getProperty('max') : $filterValue[1];
+            if (!in_array($facet->getType(), Filters\Converter::RANGE_FILTERS)) {
+                continue;
+            }
+
+            foreach ($facet->getFilters() as $filter) {
+                $filterValue = $filter->getValue();
+                $min = empty($filterValue[0]) ? $facet->getProperty('min') : $filterValue[0];
+                $max = empty($filterValue[1]) ? $facet->getProperty('max') : $filterValue[1];
+                if ($facet->getType() === 'weight') {
+                    $unit = Configuration::get('PS_WEIGHT_UNIT');
                     $filter->setLabel(
                         sprintf(
                             '%1$s%2$s - %3$s%4$s',
@@ -345,12 +358,7 @@ class SearchProvider implements FacetsRendererInterface, ProductSearchProviderIn
                             $unit
                         )
                     );
-                }
-            } elseif ($facet->getType() === 'price') {
-                foreach ($facet->getFilters() as $filter) {
-                    $filterValue = $filter->getValue();
-                    $min = empty($filterValue[0]) ? $facet->getProperty('min') : $filterValue[0];
-                    $max = empty($filterValue[1]) ? $facet->getProperty('max') : $filterValue[1];
+                } elseif ($facet->getType() === 'price') {
                     $filter->setLabel(
                         sprintf(
                             '%1$s - %2$s',
@@ -421,28 +429,13 @@ class SearchProvider implements FacetsRendererInterface, ProductSearchProviderIn
     }
 
     /**
-     * Hide entries with 0 results
-     *
-     * @param array $facets
-     */
-    private function hideZeroValues(array $facets)
-    {
-        foreach ($facets as $facet) {
-            foreach ($facet->getFilters() as $filter) {
-                if ($filter->getMagnitude() === 0) {
-                    $filter->setDisplayed(false);
-                }
-            }
-        }
-    }
-
-    /**
      * Remove the facet when there's only 1 result.
      * Keep facet status when it's a slider
      *
      * @param array $facets
+     * @param int $totalProducts
      */
-    private function hideUselessFacets(array $facets)
+    private function hideUselessFacets(array $facets, $totalProducts)
     {
         foreach ($facets as $facet) {
             if ($facet->getWidgetType() === 'slider') {
@@ -452,15 +445,29 @@ class SearchProvider implements FacetsRendererInterface, ProductSearchProviderIn
                 continue;
             }
 
+            $totalFacetProducts = 0;
             $usefulFiltersCount = 0;
             foreach ($facet->getFilters() as $filter) {
-                if ($filter->getMagnitude() > 0) {
+                if ($filter->getMagnitude() > 0 && $filter->isDisplayed()) {
+                    $totalFacetProducts += $filter->getMagnitude();
                     ++$usefulFiltersCount;
                 }
             }
 
             $facet->setDisplayed(
+                // There are two filters displayed
                 $usefulFiltersCount > 1
+                ||
+                /*
+                 * There is only one fitler and the
+                 * magnitude is different than the
+                 * total products
+                 */
+                (
+                    count($facet->getFilters()) === 1
+                    && $totalFacetProducts < $totalProducts
+                    && $usefulFiltersCount > 0
+                )
             );
         }
     }

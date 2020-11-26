@@ -7,7 +7,7 @@
  * you accept the licence agreement.
  *
  * @author    emarketing www.emarketing.com <integrations@emarketing.com>
- * @copyright 2019 easymarketing AG
+ * @copyright 2020 emarketing AG
  * @license   https://opensource.org/licenses/GPL-3.0 GNU General Public License version 3
  */
 
@@ -29,17 +29,54 @@ class FrontendHeader
 
         $html = "<!-- emarketing start -->\n";
 
-        $serviceVerification = new Verification;
-        $html .= $serviceVerification->getTag() . "\n";
+        $html .= $this->buildGoogle($currentPage);
 
-        $serviceTracker = new Tracker;
+        $html .= $this->buildFacebook($currentPage);
+
+        $html .= "<!-- emarketing end -->";
+
+        return $html;
+    }
+
+    /**
+     * @param $currentPage
+     * @return string
+     * @throws \Exception
+     */
+    private function buildGoogle($currentPage)
+    {
+        $serviceVerification = new Verification;
+        $html = $serviceVerification->getTag() . "\n";
+
+        $serviceTracker = new GoogleTracker();
         $html .= $serviceTracker->getGlobalSiteTracker() . "\n";
 
         if ($currentPage == 'order-confirmation') {
             $html .= $serviceTracker->getConversionTracker() . "\n";
         }
 
-        $html .= "<!-- emarketing end -->";
+        return $html;
+    }
+
+    /**
+     * @param $currentPage
+     * @return string
+     * @throws \Exception
+     */
+    private function buildFacebook($currentPage)
+    {
+        $serviceTracker = new FacebookPixel();
+
+        $html = $serviceTracker->getGlobalTagSnippet() . "\n";
+
+        if ($currentPage == 'product') {
+            $html .= $serviceTracker->getViewContentSnippet() . "\n";
+            $html .= $serviceTracker->getAddToCartSnippet() . "\n";
+        }
+
+        if ($currentPage == 'order-confirmation') {
+            $html .= $serviceTracker->getPurchaseSnippet() . "\n";
+        }
 
         return $html;
     }
