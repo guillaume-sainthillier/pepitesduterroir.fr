@@ -98,19 +98,19 @@ module.exports = function(env, argv) {
           parallel: true,
           uglifyOptions: {
             compress: {
-              ecma: 6,
+              ecma: 5,
               keep_fnames: false,
               keep_fargs: false,
               drop_console: true,
             },
-            ecma: 6,
+            ecma: 5,
             warnings: false,
             keep_classnames: false,
             keep_fnames: false,
             output: {
               comments: false,
               beautify: false,
-              ecma: 6,
+              ecma: 5,
             },
           },
           extractComments: false,
